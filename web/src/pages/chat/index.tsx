@@ -1,6 +1,6 @@
 import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
-import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file';
+import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file-chat';
 import PdfPreviewer from '@/pages/document-viewer/pdf';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {

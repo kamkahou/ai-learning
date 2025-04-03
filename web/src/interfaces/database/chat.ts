@@ -50,6 +50,7 @@ export interface IDialog {
   update_time: number;
   vector_similarity_weight: number;
   similarity_threshold: number;
+  file_url?: string;
 }
 
 export interface IConversation {

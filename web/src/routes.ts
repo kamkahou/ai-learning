@@ -2,25 +2,25 @@ export enum Routes {
   Login = '/login',
   // Home = '/home',
   // Datasets = '/datasets',
-  DatasetBase = '/dataset',
-  Dataset = `${Routes.DatasetBase}${Routes.DatasetBase}`,
-  Agent = '/agent',
+  // DatasetBase = '/dataset',
+  // Dataset = `${Routes.DatasetBase}${Routes.DatasetBase}`,
+  // Agent = '/agent',
   // AgentTemplates = '/agent-templates',
   // Agents = '/agents',
   // Searches = '/next-searches',
-  Search = '/next-search',
+  // Search = '/next-search',
   // Chats = '/next-chats',
   Chat = '/next-chat',
   // Files = '/files',
   // ProfileSetting = '/profile-setting',
   DatasetTesting = '/testing',
   DatasetSetting = '/setting',
-  Chunk = '/chunk',
-  ChunkResult = `${Chunk}${Chunk}`,
+  // Chunk = '/chunk',
+  // ChunkResult = `${Chunk}${Chunk}`,
   Parsed = '/parsed',
-  ParsedResult = `${Chunk}${Parsed}`,
+  // ParsedResult = `${Chunk}${Parsed}`,
   Result = '/result',
-  ResultView = `${Chunk}${Result}`,
+  // ResultView = `${Chunk}${Result}`,
 }
 
 const routes = [
@@ -198,11 +198,11 @@ const routes = [
   //     },
   //   ],
   // },
-  {
-    path: Routes.Search,
-    layout: false,
-    component: `@/pages${Routes.Search}`,
-  },
+  // {
+  //   path: Routes.Search,
+  //   layout: false,
+  //   component: `@/pages${Routes.Search}`,
+  // },
   // {
   //   path: Routes.Agents,
   //   layout: false,
@@ -214,11 +214,11 @@ const routes = [
   //     },
   //   ],
   // },
-  {
-    path: `${Routes.Agent}/:id`,
-    layout: false,
-    component: `@/pages${Routes.Agent}`,
-  },
+  // {
+  //   path: `${Routes.Agent}/:id`,
+  //   layout: false,
+  //   component: `@/pages${Routes.Agent}`,
+  // },
   // {
   //   path: Routes.AgentTemplates,
   //   layout: false,
@@ -235,60 +235,60 @@ const routes = [
   //     },
   //   ],
   // },
-  {
-    path: Routes.DatasetBase,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [{ path: Routes.DatasetBase, redirect: Routes.Dataset }],
-  },
-  {
-    path: Routes.DatasetBase,
-    layout: false,
-    component: `@/pages${Routes.DatasetBase}`,
-    routes: [
-      {
-        path: `${Routes.Dataset}/:id`,
-        component: `@/pages${Routes.Dataset}`,
-      },
-      {
-        path: `${Routes.DatasetBase}${Routes.DatasetSetting}/:id`,
-        component: `@/pages${Routes.DatasetBase}${Routes.DatasetSetting}`,
-      },
-      {
-        path: `${Routes.DatasetBase}${Routes.DatasetTesting}/:id`,
-        component: `@/pages${Routes.DatasetBase}${Routes.DatasetTesting}`,
-      },
-    ],
-  },
-  {
-    path: Routes.Chunk,
-    layout: false,
-    routes: [
-      {
-        path: Routes.Chunk,
-        component: `@/pages${Routes.Chunk}`,
-        routes: [
-          {
-            path: `${Routes.ParsedResult}/:id`,
-            component: `@/pages${Routes.Chunk}/parsed-result`,
-          },
-          {
-            path: `${Routes.ChunkResult}/:id`,
-            component: `@/pages${Routes.Chunk}/chunk-result`,
-          },
-          {
-            path: `${Routes.ResultView}/:id`,
-            component: `@/pages${Routes.Chunk}/result-view`,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    path: Routes.Chunk,
-    layout: false,
-    component: `@/pages${Routes.Chunk}`,
-  },
+  // {
+  //   path: Routes.DatasetBase,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [{ path: Routes.DatasetBase, redirect: Routes.Dataset }],
+  // },
+  // {
+  //   path: Routes.DatasetBase,
+  //   layout: false,
+  //   component: `@/pages${Routes.DatasetBase}`,
+  //   routes: [
+  //     {
+  //       path: `${Routes.Dataset}/:id`,
+  //       component: `@/pages${Routes.Dataset}`,
+  //     },
+  //     {
+  //       path: `${Routes.DatasetBase}${Routes.DatasetSetting}/:id`,
+  //       component: `@/pages${Routes.DatasetBase}${Routes.DatasetSetting}`,
+  //     },
+  //     {
+  //       path: `${Routes.DatasetBase}${Routes.DatasetTesting}/:id`,
+  //       component: `@/pages${Routes.DatasetBase}${Routes.DatasetTesting}`,
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: Routes.Chunk,
+  //   layout: false,
+  //   routes: [
+  //     {
+  //       path: Routes.Chunk,
+  //       component: `@/pages${Routes.Chunk}`,
+  //       routes: [
+  //         {
+  //           path: `${Routes.ParsedResult}/:id`,
+  //           component: `@/pages${Routes.Chunk}/parsed-result`,
+  //         },
+  //         {
+  //           path: `${Routes.ChunkResult}/:id`,
+  //           component: `@/pages${Routes.Chunk}/chunk-result`,
+  //         },
+  //         {
+  //           path: `${Routes.ResultView}/:id`,
+  //           component: `@/pages${Routes.Chunk}/result-view`,
+  //         },
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: Routes.Chunk,
+  //   layout: false,
+  //   component: `@/pages${Routes.Chunk}`,
+  // },
   // {
   //   path: Routes.ProfileSetting,
   //   layout: false,

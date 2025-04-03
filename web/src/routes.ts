@@ -24,7 +24,7 @@ const routes = [
     layout: false,
     wrappers: ['@/wrappers/auth'],
     routes: [
-      { path: '/', redirect: '/knowledge' },
+      { path: '/', redirect: '/chat' },
       {
         path: '/knowledge',
         component: '@/pages/knowledge',

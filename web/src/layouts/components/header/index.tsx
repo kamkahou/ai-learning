@@ -35,9 +35,7 @@ const RagHeader = () => {
   );
 
   const currentPath = useMemo(() => {
-    return (
-      tagsData.find((x) => pathname.startsWith(x.path))?.name || 'knowledge'
-    );
+    return tagsData.find((x) => pathname.startsWith(x.path))?.name || 'chat';
   }, [pathname, tagsData]);
 
   const handleChange = useCallback(
@@ -64,16 +62,10 @@ const RagHeader = () => {
         height: '120px',
       }}
     >
-      <a href={window.location.origin}>
-        <Space
-          size={12}
-          onClick={handleLogoClick}
-          className={styles.logoWrapper}
-        >
-          <img src="/logo.svg" alt="" className={styles.appIcon} />
-          <span className={styles.appName}>{appConf.appName}</span>
-        </Space>
-      </a>
+      <Space size={12} className={styles.logoWrapper}>
+        <img src="/logo.svg" alt="" className={styles.appIcon} />
+        <span className={styles.appName}>{appConf.appName}</span>
+      </Space>
       <Space size={[0, 8]} wrap>
         <Radio.Group
           defaultValue="a"

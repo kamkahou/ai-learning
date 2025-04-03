@@ -1,5 +1,7 @@
 import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
+import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file';
+import PdfPreviewer from '@/pages/document-viewer/pdf';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
   Avatar,
@@ -17,6 +19,7 @@ import {
 } from 'antd';
 import { MenuItemProps } from 'antd/lib/menu/MenuItem';
 import classNames from 'classnames';
+import { Resizable } from 're-resizable';
 import { useCallback, useState } from 'react';
 import ChatConfigurationModal from './chat-configuration-modal';
 import ChatContainer from './chat-container';
@@ -233,130 +236,174 @@ const Chat = () => {
 
   return (
     <Flex className={styles.chatWrapper}>
-      <Flex className={styles.chatAppWrapper}>
-        <Flex flex={1} vertical>
-          <Button type="primary" onClick={handleShowChatConfigurationModal()}>
-            {t('createAssistant')}
-          </Button>
-          <Divider></Divider>
-          <Flex className={styles.chatAppContent} vertical gap={10}>
-            <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
-              {dialogList.map((x) => (
-                <Card
-                  key={x.id}
-                  hoverable
-                  className={classNames(styles.chatAppCard, {
-                    [theme === 'dark'
-                      ? styles.chatAppCardSelectedDark
-                      : styles.chatAppCardSelected]: dialogId === x.id,
-                  })}
-                  onMouseEnter={handleAppCardEnter(x.id)}
-                  onMouseLeave={handleItemLeave}
-                  onClick={handleDialogCardClick(x.id)}
-                >
-                  <Flex justify="space-between" align="center">
-                    <Space size={15}>
-                      <Avatar src={x.icon} shape={'square'} />
-                      <section>
-                        <b>
-                          <Text
-                            ellipsis={{ tooltip: x.name }}
-                            style={{ width: 130 }}
-                          >
-                            {x.name}
-                          </Text>
-                        </b>
-                        <div>{x.description}</div>
-                      </section>
-                    </Space>
-                    {activated === x.id && (
-                      <section>
-                        <Dropdown menu={{ items: buildAppItems(x) }}>
-                          <ChatAppCube
-                            className={styles.cubeIcon}
-                          ></ChatAppCube>
-                        </Dropdown>
-                      </section>
-                    )}
-                  </Flex>
-                </Card>
-              ))}
-            </Spin>
-          </Flex>
+      <Resizable
+        defaultSize={{
+          width: '30%',
+          height: '100%',
+        }}
+        minWidth="500px"
+        maxWidth="50%"
+        enable={{
+          top: false,
+          right: true,
+          bottom: false,
+          left: false,
+          topRight: false,
+          bottomRight: false,
+          bottomLeft: false,
+          topLeft: false,
+        }}
+        className={styles.pdfPreviewerWrapper}
+      >
+        <Flex vertical style={{ height: '100%' }}>
+          <KnowledgeFile />
+          <Divider />
+          <PdfPreviewer url={currentRecord?.file_url || ''} />
         </Flex>
-      </Flex>
-      <Divider type={'vertical'} className={styles.divider}></Divider>
-      <Flex className={styles.chatTitleWrapper}>
-        <Flex flex={1} vertical>
-          <Flex
-            justify={'space-between'}
-            align="center"
-            className={styles.chatTitle}
-          >
-            <Space>
-              <b>{t('chat')}</b>
-              <Tag>{conversationList.length}</Tag>
-            </Space>
-            <Tooltip title={t('newChat')}>
-              <div>
-                <SvgIcon
-                  name="plus-circle-fill"
-                  width={20}
-                  onClick={handleCreateTemporaryConversation}
-                ></SvgIcon>
-              </div>
-            </Tooltip>
-          </Flex>
-          <Divider></Divider>
-          <Flex vertical gap={10} className={styles.chatTitleContent}>
-            <Spin
-              spinning={conversationLoading}
-              wrapperClassName={styles.chatSpin}
-            >
-              {conversationList.map((x) => (
-                <Card
-                  key={x.id}
-                  hoverable
-                  onClick={handleConversationCardClick(x.id, x.is_new)}
-                  onMouseEnter={handleConversationCardEnter(x.id)}
-                  onMouseLeave={handleConversationItemLeave}
-                  className={classNames(styles.chatTitleCard, {
-                    [theme === 'dark'
-                      ? styles.chatTitleCardSelectedDark
-                      : styles.chatTitleCardSelected]: x.id === conversationId,
-                  })}
-                >
-                  <Flex justify="space-between" align="center">
-                    <div>
-                      <Text
-                        ellipsis={{ tooltip: x.name }}
-                        style={{ width: 150 }}
-                      >
-                        {x.name}
-                      </Text>
-                    </div>
-                    {conversationActivated === x.id &&
-                      x.id !== '' &&
-                      !x.is_new && (
+      </Resizable>
+      <Flex className={styles.chatContentWrapper}>
+        <Resizable
+          defaultSize={{
+            width: '288px',
+            height: '100%',
+          }}
+          enable={{
+            top: false,
+            right: true,
+            bottom: false,
+            left: false,
+            topRight: false,
+            bottomRight: false,
+            bottomLeft: false,
+            topLeft: false,
+          }}
+          className={styles.chatAppWrapper}
+        >
+          <Flex flex={1} vertical>
+            <Button type="primary" onClick={handleShowChatConfigurationModal()}>
+              {t('createAssistant')}
+            </Button>
+            <Divider></Divider>
+            <Flex className={styles.chatAppContent} vertical gap={10}>
+              <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
+                {dialogList.map((x) => (
+                  <Card
+                    key={x.id}
+                    hoverable
+                    className={classNames(styles.chatAppCard, {
+                      [theme === 'dark'
+                        ? styles.chatAppCardSelectedDark
+                        : styles.chatAppCardSelected]: dialogId === x.id,
+                    })}
+                    onMouseEnter={handleAppCardEnter(x.id)}
+                    onMouseLeave={handleItemLeave}
+                    onClick={handleDialogCardClick(x.id)}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Space size={15}>
+                        <Avatar src={x.icon} shape={'square'} />
                         <section>
-                          <Dropdown
-                            menu={{ items: buildConversationItems(x.id) }}
-                          >
+                          <b>
+                            <Text
+                              ellipsis={{ tooltip: x.name }}
+                              style={{ width: 130 }}
+                            >
+                              {x.name}
+                            </Text>
+                          </b>
+                          <div>{x.description}</div>
+                        </section>
+                      </Space>
+                      {activated === x.id && (
+                        <section>
+                          <Dropdown menu={{ items: buildAppItems(x) }}>
                             <ChatAppCube
                               className={styles.cubeIcon}
                             ></ChatAppCube>
                           </Dropdown>
                         </section>
                       )}
-                  </Flex>
-                </Card>
-              ))}
-            </Spin>
+                    </Flex>
+                  </Card>
+                ))}
+              </Spin>
+            </Flex>
+          </Flex>
+        </Resizable>
+        <Divider type={'vertical'} className={styles.divider}></Divider>
+        <Flex className={styles.chatTitleWrapper}>
+          <Flex flex={1} vertical>
+            <Flex
+              justify={'space-between'}
+              align="center"
+              className={styles.chatTitle}
+            >
+              <Space>
+                <b>{t('chat')}</b>
+                <Tag>{conversationList.length}</Tag>
+              </Space>
+              <Tooltip title={t('newChat')}>
+                <div>
+                  <SvgIcon
+                    name="plus-circle-fill"
+                    width={20}
+                    onClick={handleCreateTemporaryConversation}
+                  ></SvgIcon>
+                </div>
+              </Tooltip>
+            </Flex>
+            <Divider></Divider>
+            <Flex vertical gap={10} className={styles.chatTitleContent}>
+              <Spin
+                spinning={conversationLoading}
+                wrapperClassName={styles.chatSpin}
+              >
+                {conversationList.map((x) => (
+                  <Card
+                    key={x.id}
+                    hoverable
+                    onClick={handleConversationCardClick(x.id, x.is_new)}
+                    onMouseEnter={handleConversationCardEnter(x.id)}
+                    onMouseLeave={handleConversationItemLeave}
+                    className={classNames(styles.chatTitleCard, {
+                      [theme === 'dark'
+                        ? styles.chatTitleCardSelectedDark
+                        : styles.chatTitleCardSelected]:
+                        x.id === conversationId,
+                    })}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <div>
+                        <Text
+                          ellipsis={{ tooltip: x.name }}
+                          style={{ width: 150 }}
+                        >
+                          {x.name}
+                        </Text>
+                      </div>
+                      {conversationActivated === x.id &&
+                        x.id !== '' &&
+                        !x.is_new && (
+                          <section>
+                            <Dropdown
+                              menu={{ items: buildConversationItems(x.id) }}
+                            >
+                              <ChatAppCube
+                                className={styles.cubeIcon}
+                              ></ChatAppCube>
+                            </Dropdown>
+                          </section>
+                        )}
+                    </Flex>
+                  </Card>
+                ))}
+              </Spin>
+            </Flex>
           </Flex>
         </Flex>
+        <Divider type={'vertical'} className={styles.divider}></Divider>
+        <ChatContainer controller={controller}></ChatContainer>
       </Flex>
-      <Divider type={'vertical'} className={styles.divider}></Divider>
-      <ChatContainer controller={controller}></ChatContainer>
       {dialogEditVisible && (
         <ChatConfigurationModal
           visible={dialogEditVisible}

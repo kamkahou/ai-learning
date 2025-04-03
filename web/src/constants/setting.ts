@@ -10,7 +10,7 @@ export enum UserSettingRouteKey {
   Logout = 'logout',
 }
 
-export const ProfileSettingBaseKey = 'profile-setting';
+// export const ProfileSettingBaseKey = 'profile-setting';
 
 export enum ProfileSettingRouteKey {
   Profile = 'profile',

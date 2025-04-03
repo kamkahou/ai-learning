@@ -12,7 +12,7 @@ export enum Routes {
   Chats = '/next-chats',
   Chat = '/next-chat',
   Files = '/files',
-  ProfileSetting = '/profile-setting',
+  // ProfileSetting = '/profile-setting',
   DatasetTesting = '/testing',
   DatasetSetting = '/setting',
   Chunk = '/chunk',
@@ -289,37 +289,37 @@ const routes = [
     layout: false,
     component: `@/pages${Routes.Chunk}`,
   },
-  {
-    path: Routes.ProfileSetting,
-    layout: false,
-    component: `@/pages${Routes.ProfileSetting}`,
-    routes: [
-      {
-        path: Routes.ProfileSetting,
-        redirect: `${Routes.ProfileSetting}/profile`,
-      },
-      {
-        path: `${Routes.ProfileSetting}/profile`,
-        component: `@/pages${Routes.ProfileSetting}/profile`,
-      },
-      {
-        path: `${Routes.ProfileSetting}/team`,
-        component: `@/pages${Routes.ProfileSetting}/team`,
-      },
-      {
-        path: `${Routes.ProfileSetting}/plan`,
-        component: `@/pages${Routes.ProfileSetting}/plan`,
-      },
-      {
-        path: `${Routes.ProfileSetting}/model`,
-        component: `@/pages${Routes.ProfileSetting}/model`,
-      },
-      {
-        path: `${Routes.ProfileSetting}/prompt`,
-        component: `@/pages${Routes.ProfileSetting}/prompt`,
-      },
-    ],
-  },
+  // {
+  //   path: Routes.ProfileSetting,
+  //   layout: false,
+  //   component: `@/pages${Routes.ProfileSetting}`,
+  //   routes: [
+  //     {
+  //       path: Routes.ProfileSetting,
+  //       redirect: `${Routes.ProfileSetting}/profile`,
+  //     },
+  //     {
+  //       path: `${Routes.ProfileSetting}/profile`,
+  //       component: `@/pages${Routes.ProfileSetting}/profile`,
+  //     },
+  //     {
+  //       path: `${Routes.ProfileSetting}/team`,
+  //       component: `@/pages${Routes.ProfileSetting}/team`,
+  //     },
+  //     {
+  //       path: `${Routes.ProfileSetting}/plan`,
+  //       component: `@/pages${Routes.ProfileSetting}/plan`,
+  //     },
+  //     {
+  //       path: `${Routes.ProfileSetting}/model`,
+  //       component: `@/pages${Routes.ProfileSetting}/model`,
+  //     },
+  //     {
+  //       path: `${Routes.ProfileSetting}/prompt`,
+  //       component: `@/pages${Routes.ProfileSetting}/prompt`,
+  //     },
+  //   ],
+  // },
 ];
 
 export default routes;

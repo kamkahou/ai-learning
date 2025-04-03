@@ -1,17 +1,17 @@
 export enum Routes {
   Login = '/login',
-  Home = '/home',
-  Datasets = '/datasets',
+  // Home = '/home',
+  // Datasets = '/datasets',
   DatasetBase = '/dataset',
   Dataset = `${Routes.DatasetBase}${Routes.DatasetBase}`,
   Agent = '/agent',
-  AgentTemplates = '/agent-templates',
-  Agents = '/agents',
-  Searches = '/next-searches',
+  // AgentTemplates = '/agent-templates',
+  // Agents = '/agents',
+  // Searches = '/next-searches',
   Search = '/next-search',
-  Chats = '/next-chats',
+  // Chats = '/next-chats',
   Chat = '/next-chat',
-  Files = '/files',
+  // Files = '/files',
   // ProfileSetting = '/profile-setting',
   DatasetTesting = '/testing',
   DatasetSetting = '/setting',
@@ -29,11 +29,11 @@ const routes = [
     component: '@/pages/login',
     layout: false,
   },
-  {
-    path: '/login-next',
-    component: '@/pages/login-next',
-    layout: false,
-  },
+  // {
+  //   path: '/login-next',
+  //   component: '@/pages/login-next',
+  //   layout: false,
+  // },
   {
     path: '/chat/share',
     component: '@/pages/chat/share',
@@ -149,92 +149,92 @@ const routes = [
     component: '@/pages/404',
     layout: false,
   },
-  {
-    path: Routes.Home,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Home,
-        component: `@/pages${Routes.Home}`,
-      },
-    ],
-  },
-  {
-    path: Routes.Datasets,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Datasets,
-        component: `@/pages${Routes.Datasets}`,
-      },
-    ],
-  },
-  {
-    path: Routes.Chats,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Chats,
-        component: `@/pages${Routes.Chats}`,
-      },
-    ],
-  },
-  {
-    path: Routes.Chat,
-    layout: false,
-    component: `@/pages${Routes.Chats}/chat`,
-  },
-  {
-    path: Routes.Searches,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Searches,
-        component: `@/pages${Routes.Searches}`,
-      },
-    ],
-  },
+  // {
+  //   path: Routes.Home,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Home,
+  //       component: `@/pages${Routes.Home}`,
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: Routes.Datasets,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Datasets,
+  //       component: `@/pages${Routes.Datasets}`,
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: Routes.Chats,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Chats,
+  //       component: `@/pages${Routes.Chats}`,
+  //     },
+  //   ],
+  // },
+  // {
+  //   path: Routes.Chat,
+  //   layout: false,
+  //   component: `@/pages${Routes.Chats}/chat`,
+  // },
+  // {
+  //   path: Routes.Searches,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Searches,
+  //       component: `@/pages${Routes.Searches}`,
+  //     },
+  //   ],
+  // },
   {
     path: Routes.Search,
     layout: false,
     component: `@/pages${Routes.Search}`,
   },
-  {
-    path: Routes.Agents,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Agents,
-        component: `@/pages${Routes.Agents}`,
-      },
-    ],
-  },
+  // {
+  //   path: Routes.Agents,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Agents,
+  //       component: `@/pages${Routes.Agents}`,
+  //     },
+  //   ],
+  // },
   {
     path: `${Routes.Agent}/:id`,
     layout: false,
     component: `@/pages${Routes.Agent}`,
   },
-  {
-    path: Routes.AgentTemplates,
-    layout: false,
-    component: `@/pages${Routes.Agents}${Routes.AgentTemplates}`,
-  },
-  {
-    path: Routes.Files,
-    layout: false,
-    component: '@/layouts/next',
-    routes: [
-      {
-        path: Routes.Files,
-        component: `@/pages${Routes.Files}`,
-      },
-    ],
-  },
+  // {
+  //   path: Routes.AgentTemplates,
+  //   layout: false,
+  //   component: `@/pages${Routes.Agents}${Routes.AgentTemplates}`,
+  // },
+  // {
+  //   path: Routes.Files,
+  //   layout: false,
+  //   component: '@/layouts/next',
+  //   routes: [
+  //     {
+  //       path: Routes.Files,
+  //       component: `@/pages${Routes.Files}`,
+  //     },
+  //   ],
+  // },
   {
     path: Routes.DatasetBase,
     layout: false,

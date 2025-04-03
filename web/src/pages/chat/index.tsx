@@ -1,5 +1,6 @@
 import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
+import { useFetchKnowledgeList } from '@/hooks/knowledge-hooks';
 import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file-chat';
 import PdfPreviewer from '@/pages/document-viewer/pdf';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
@@ -20,7 +21,7 @@ import {
 import { MenuItemProps } from 'antd/lib/menu/MenuItem';
 import classNames from 'classnames';
 import { Resizable } from 're-resizable';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import ChatConfigurationModal from './chat-configuration-modal';
 import ChatContainer from './chat-container';
 import {
@@ -52,7 +53,22 @@ import styles from './index.less';
 const { Text } = Typography;
 
 const Chat = () => {
+  const { list: knowledgeList, loading: knowledgeLoading } =
+    useFetchKnowledgeList();
   const { data: dialogList, loading: dialogLoading } = useFetchNextDialogList();
+
+  // 在组件初始化时自动选择第一个dataset
+  React.useEffect(() => {
+    if (knowledgeList?.length > 0) {
+      const firstDataset = knowledgeList[0];
+      // 通过URL参数设置选中的dataset
+      const searchParams = new URLSearchParams(window.location.search);
+      if (!searchParams.get('id')) {
+        searchParams.set('id', firstDataset.id);
+        window.history.replaceState(null, '', `?${searchParams.toString()}`);
+      }
+    }
+  }, [knowledgeList]);
   const { onRemoveDialog } = useDeleteDialog();
   const { onRemoveConversation } = useDeleteConversation();
   const { handleClickDialog } = useClickDialogCard();

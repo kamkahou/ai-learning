@@ -43,24 +43,24 @@ export const LanguageList = [
   'English',
   'Chinese',
   'Traditional Chinese',
-  'Indonesia',
-  'Spanish',
-  'Vietnamese',
-  'Japanese',
-  'Portuguese BR',
-  'German',
+  // 'Indonesia',
+  // 'Spanish',
+  // 'Vietnamese',
+  // 'Japanese',
+  // 'Portuguese BR',
+  // 'German',
 ];
 
 export const LanguageMap = {
   English: 'English',
   Chinese: '简体中文',
   'Traditional Chinese': '繁體中文',
-  Indonesia: 'Indonesia',
-  Spanish: 'Español',
-  Vietnamese: 'Tiếng việt',
-  Japanese: '日本語',
-  'Portuguese BR': 'Português BR',
-  German: 'German',
+  // Indonesia: 'Indonesia',
+  // Spanish: 'Español',
+  // Vietnamese: 'Tiếng việt',
+  // Japanese: '日本語',
+  // 'Portuguese BR': 'Português BR',
+  // German: 'German',
 };
 
 export enum LanguageAbbreviation {

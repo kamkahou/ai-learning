@@ -18,9 +18,7 @@ import userService, {
   listTenantUser,
 } from '@/services/user-service';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Modal, message } from 'antd';
-import DOMPurify from 'dompurify';
-import { isEmpty } from 'lodash';
+import { message } from 'antd';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -61,25 +59,24 @@ export const useFetchTenantInfo = (
         // llm_id is chat_id
         // asr_id is speech2txt
         const { data } = res;
-        if (
-          showEmptyModelWarn &&
-          (isEmpty(data.embd_id) || isEmpty(data.llm_id))
-        ) {
-          Modal.warning({
-            title: t('common.warn'),
-            content: (
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(t('setting.modelProvidersWarn')),
-                }}
-              ></div>
-            ),
-            onOk() {
-              // 移除强制跳转逻辑
-              // history.push('/user-setting/model');
-            },
-          });
-        }
+        // if (
+        //   showEmptyModelWarn &&
+        //   (isEmpty(data.embd_id) || isEmpty(data.llm_id))
+        // ) {
+        //   Modal.warning({
+        //     title: t('common.warn'),
+        //     content: (
+        //       <div
+        //         dangerouslySetInnerHTML={{
+        //           __html: DOMPurify.sanitize(t('setting.modelProvidersWarn')),
+        //         }}
+        //       ></div>
+        //     ),
+        //     onOk() {
+        //       history.push('/user-setting/model');
+        //     },
+        //   });
+        // }
         data.chat_id = data.llm_id;
         data.speech2text_id = data.asr_id;
 

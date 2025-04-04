@@ -28,12 +28,11 @@ import { history, useSearchParams } from 'umi';
 //#region logic
 
 export const useClickDialogCard = () => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_, setSearchParams] = useSearchParams();
+  const [currentQueryParameters, setSearchParams] = useSearchParams();
 
   const newQueryParameters: URLSearchParams = useMemo(() => {
-    return new URLSearchParams();
-  }, []);
+    return new URLSearchParams(currentQueryParameters.toString());
+  }, [currentQueryParameters]);
 
   const handleClickDialog = useCallback(
     (dialogId: string) => {

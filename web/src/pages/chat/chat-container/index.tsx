@@ -10,7 +10,7 @@ import {
 } from '../hooks';
 import { buildMessageItemReference } from '../utils';
 
-import MessageInput from '@/components/message-input';
+import MessageInput from '@/components/message-input-without-upload';
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
 import {

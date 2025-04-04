@@ -5,8 +5,6 @@ import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file-chat'
 import PdfPreviewer from '@/pages/document-viewer/pdf';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
-  Avatar,
-  Button,
   Card,
   Divider,
   Dropdown,
@@ -271,7 +269,7 @@ const Chat = () => {
           width: '30%',
           height: '100%',
         }}
-        minWidth="500px"
+        minWidth="600px"
         maxWidth="50%"
         enable={{
           top: false,
@@ -292,74 +290,7 @@ const Chat = () => {
         </Flex>
       </Resizable>
       <Flex className={styles.chatContentWrapper}>
-        <Resizable
-          defaultSize={{
-            width: '288px',
-            height: '100%',
-          }}
-          enable={{
-            top: false,
-            right: true,
-            bottom: false,
-            left: false,
-            topRight: false,
-            bottomRight: false,
-            bottomLeft: false,
-            topLeft: false,
-          }}
-          className={styles.chatAppWrapper}
-        >
-          <Flex flex={1} vertical>
-            <Button type="primary" onClick={handleShowChatConfigurationModal()}>
-              {t('createAssistant')}
-            </Button>
-            <Divider></Divider>
-            <Flex className={styles.chatAppContent} vertical gap={10}>
-              <Spin spinning={dialogLoading} wrapperClassName={styles.chatSpin}>
-                {dialogList.map((x) => (
-                  <Card
-                    key={x.id}
-                    hoverable
-                    className={classNames(styles.chatAppCard, {
-                      [theme === 'dark'
-                        ? styles.chatAppCardSelectedDark
-                        : styles.chatAppCardSelected]: dialogId === x.id,
-                    })}
-                    onMouseEnter={handleAppCardEnter(x.id)}
-                    onMouseLeave={handleItemLeave}
-                    onClick={handleDialogCardClick(x.id)}
-                  >
-                    <Flex justify="space-between" align="center">
-                      <Space size={15}>
-                        <Avatar src={x.icon} shape={'square'} />
-                        <section>
-                          <b>
-                            <Text
-                              ellipsis={{ tooltip: x.name }}
-                              style={{ width: 130 }}
-                            >
-                              {x.name}
-                            </Text>
-                          </b>
-                          <div>{x.description}</div>
-                        </section>
-                      </Space>
-                      {activated === x.id && (
-                        <section>
-                          <Dropdown menu={{ items: buildAppItems(x) }}>
-                            <ChatAppCube
-                              className={styles.cubeIcon}
-                            ></ChatAppCube>
-                          </Dropdown>
-                        </section>
-                      )}
-                    </Flex>
-                  </Card>
-                ))}
-              </Spin>
-            </Flex>
-          </Flex>
-        </Resizable>
+        <ChatContainer controller={controller}></ChatContainer>
         <Divider type={'vertical'} className={styles.divider}></Divider>
         <Flex className={styles.chatTitleWrapper}>
           <Flex flex={1} vertical>
@@ -431,8 +362,6 @@ const Chat = () => {
             </Flex>
           </Flex>
         </Flex>
-        <Divider type={'vertical'} className={styles.divider}></Divider>
-        <ChatContainer controller={controller}></ChatContainer>
       </Flex>
       {dialogEditVisible && (
         <ChatConfigurationModal

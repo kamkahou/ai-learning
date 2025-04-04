@@ -57,18 +57,32 @@ const Chat = () => {
     useFetchKnowledgeList();
   const { data: dialogList, loading: dialogLoading } = useFetchNextDialogList();
 
-  // 在组件初始化时自动选择第一个dataset
+  // 在组件初始化时自动选择第一个dataset和dialog
   React.useEffect(() => {
-    if (knowledgeList?.length > 0) {
+    if (knowledgeList?.length > 0 && dialogList?.length > 0) {
       const firstDataset = knowledgeList[0];
-      // 通过URL参数设置选中的dataset
+      const firstDialog = dialogList[0];
+      // 通过URL参数设置选中的dataset和dialog
       const searchParams = new URLSearchParams(window.location.search);
+      let needsReload = false;
+
       if (!searchParams.get('id')) {
         searchParams.set('id', firstDataset.id);
+        needsReload = true;
+      }
+
+      if (!searchParams.get('dialogId')) {
+        searchParams.set('dialogId', firstDialog.id);
+        needsReload = true;
+      }
+
+      if (needsReload) {
         window.history.replaceState(null, '', `?${searchParams.toString()}`);
+        // 强制重新加载对话列表
+        window.location.reload();
       }
     }
-  }, [knowledgeList]);
+  }, [knowledgeList, dialogList]);
   const { onRemoveDialog } = useDeleteDialog();
   const { onRemoveConversation } = useDeleteConversation();
   const { handleClickDialog } = useClickDialogCard();

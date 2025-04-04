@@ -1,8 +1,6 @@
-import { ReactComponent as KnowledgeBaseIcon } from '@/assets/svg/knowledge-base.svg';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useFetchAppConf } from '@/hooks/logic-hooks';
 import { useNavigateWithFromState } from '@/hooks/route-hook';
-import { MessageOutlined } from '@ant-design/icons';
 // import { SearchOutlined } from '@ant-design/icons';
 import { Flex, Layout, Radio, Space, theme } from 'antd';
 import { MouseEventHandler, useCallback, useMemo } from 'react';
@@ -25,8 +23,8 @@ const RagHeader = () => {
   const { theme: themeRag } = useTheme();
   const tagsData = useMemo(
     () => [
-      { path: '/knowledge', name: t('knowledgeBase'), icon: KnowledgeBaseIcon },
-      { path: '/chat', name: t('chat'), icon: MessageOutlined },
+      // { path: '/knowledge', name: t('knowledgeBase'), icon: KnowledgeBaseIcon },
+      // { path: '/chat', name: t('chat'), icon: MessageOutlined },
       // { path: '/search', name: t('search'), icon: SearchOutlined },
       // { path: '/flow', name: t('flow'), icon: GraphIcon },
       // { path: '/file', name: t('fileManager'), icon: FileIcon },
@@ -57,9 +55,10 @@ const RagHeader = () => {
         padding: '0 16px',
         background: colorBgContainer,
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         height: '120px',
+        position: 'relative',
       }}
     >
       <Space size={12} className={styles.logoWrapper}>
@@ -99,7 +98,9 @@ const RagHeader = () => {
           ))}
         </Radio.Group>
       </Space>
-      <Toolbar></Toolbar>
+      <div style={{ position: 'absolute', right: '16px' }}>
+        <Toolbar />
+      </div>
     </Header>
   );
 };

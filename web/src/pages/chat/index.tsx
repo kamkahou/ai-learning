@@ -2,7 +2,6 @@ import { ReactComponent as ChatAppCube } from '@/assets/svg/chat-app-cube.svg';
 import RenameModal from '@/components/rename-modal';
 import { useFetchKnowledgeList } from '@/hooks/knowledge-hooks';
 import KnowledgeFile from '@/pages/add-knowledge/components/knowledge-file-chat';
-import PdfPreviewer from '@/pages/document-viewer/pdf';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import {
   Card,
@@ -285,8 +284,6 @@ const Chat = () => {
       >
         <Flex vertical style={{ height: '100%' }}>
           <KnowledgeFile />
-          <Divider />
-          <PdfPreviewer url={currentRecord?.file_url || ''} />
         </Flex>
       </Resizable>
       <Flex className={styles.chatContentWrapper}>

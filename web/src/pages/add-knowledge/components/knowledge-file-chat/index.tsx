@@ -8,8 +8,10 @@ import {
 import { useSetSelectedRecord } from '@/hooks/logic-hooks';
 import { useSelectParserList } from '@/hooks/user-setting-hooks';
 import { getExtension } from '@/utils/document-util';
-import { Flex, Switch, Table, Typography } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Button, Flex, Switch, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CreateFileModal from './create-file-modal';
 import DocumentToolbar from './document-toolbar';
@@ -32,7 +34,7 @@ import FileUploadModal from '@/components/file-upload-modal';
 import { IDocumentInfo } from '@/interfaces/database/document';
 import styles from './index.less';
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 const KnowledgeFile = () => {
   const { searchString, documents, pagination, handleInputChange } =
@@ -41,6 +43,12 @@ const KnowledgeFile = () => {
   const { setDocumentStatus } = useSetNextDocumentStatus();
   const { toChunk } = useNavigateToOtherPage();
   const { currentRecord, setRecord } = useSetSelectedRecord<IDocumentInfo>();
+
+  // 添加文档预览的状态
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewTitle, setPreviewTitle] = useState('');
+
   const {
     renameLoading,
     onRenameOk,
@@ -95,6 +103,19 @@ const KnowledgeFile = () => {
   const rowSelection = useGetRowSelection();
   const getDocumentUrl = useGetDocumentUrl();
 
+  // 显示文档预览的函数
+  const showDocumentPreview = (document: IDocumentInfo) => {
+    setRecord(document);
+    setPreviewTitle(document.name);
+    setPreviewUrl(getDocumentUrl(document.id));
+    setIsPreviewMode(true);
+  };
+
+  // 返回文档列表的函数
+  const backToList = () => {
+    setIsPreviewMode(false);
+  };
+
   const columns: ColumnsType<IDocumentInfo> = [
     {
       title: t('name'),
@@ -103,14 +124,16 @@ const KnowledgeFile = () => {
       render: (text: any, { id, thumbnail, name }) => (
         <div
           className={styles.toChunks}
-          onClick={() =>
-            setRecord({
+          onClick={() => {
+            const document = {
               id,
               name,
               thumbnail,
               file_url: getDocumentUrl(id),
-            } as IDocumentInfo)
-          }
+            } as IDocumentInfo;
+            setRecord(document);
+            showDocumentPreview(document);
+          }}
         >
           <Flex gap={10} align="center">
             {thumbnail ? (
@@ -179,23 +202,56 @@ const KnowledgeFile = () => {
 
   return (
     <div className={styles.datasetWrapper}>
-      <DocumentToolbar
-        selectedRowKeys={rowSelection.selectedRowKeys as string[]}
-        showCreateModal={showCreateModal}
-        showWebCrawlModal={showWebCrawlUploadModal}
-        showDocumentUploadModal={showDocumentUploadModal}
-        searchString={searchString}
-        handleInputChange={handleInputChange}
-      ></DocumentToolbar>
-      <Table
-        rowKey="id"
-        columns={finalColumns}
-        dataSource={documents}
-        pagination={pagination}
-        rowSelection={rowSelection}
-        className={styles.documentTable}
-        // scroll={{ scrollToFirstRowOnChange: true, x: 1300 }}
-      />
+      {!isPreviewMode ? (
+        // 文档列表视图
+        <>
+          <DocumentToolbar
+            selectedRowKeys={rowSelection.selectedRowKeys as string[]}
+            showCreateModal={showCreateModal}
+            showWebCrawlModal={showWebCrawlUploadModal}
+            showDocumentUploadModal={showDocumentUploadModal}
+            searchString={searchString}
+            handleInputChange={handleInputChange}
+          ></DocumentToolbar>
+          <Table
+            rowKey="id"
+            columns={finalColumns}
+            dataSource={documents}
+            pagination={pagination}
+            rowSelection={rowSelection}
+            className={styles.documentTable}
+          />
+        </>
+      ) : (
+        // 文档预览视图
+        <div className={styles.previewContainer}>
+          <div className={styles.previewHeader}>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={backToList}
+              style={{ marginRight: '10px' }}
+              type="text"
+            />
+            <Title level={4} style={{ margin: 0 }}>
+              {previewTitle}
+            </Title>
+          </div>
+          <div className={styles.previewContent}>
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                style={{
+                  width: '100%',
+                  height: 'calc(100vh - 250px)',
+                  border: 'none',
+                }}
+                title={previewTitle}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
       <CreateFileModal
         visible={createVisible}
         hideModal={hideCreateModal}

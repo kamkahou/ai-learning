@@ -1,11 +1,10 @@
 import { useLogin, useRegister } from '@/hooks/login-hooks';
 import { useSystemConfig } from '@/hooks/system-hooks';
 import { rsaPsw } from '@/utils';
-import { Button, Checkbox, Form, Input } from 'antd';
+import { Button, Checkbox, Flex, Form, Input } from 'antd';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icon, useNavigate } from 'umi';
-import RightPanel from './right-panel';
 
 import { Domain } from '@/constants/common';
 import styles from './index.less';
@@ -61,8 +60,8 @@ const Login = () => {
     }
   };
   const formItemLayout = {
-    labelCol: { span: 6 },
-    // wrapperCol: { span: 8 },
+    labelCol: { span: 10 },
+    wrapperCol: { span: 20 },
   };
 
   const toGoogle = () => {
@@ -72,6 +71,14 @@ const Login = () => {
 
   return (
     <div className={styles.loginPage}>
+      <div className={styles.loginHeader}>
+        <Flex justify="center" align="center" gap="middle">
+          <img src="/logo.svg" alt="logo" width={120} />
+          <span style={{ fontSize: '32px', fontWeight: 'bold' }}>
+            Math Learn
+          </span>
+        </Flex>
+      </div>
       <div className={styles.loginLeft}>
         <div className={styles.leftContainer}>
           <div className={styles.loginTitle}>
@@ -187,9 +194,6 @@ const Login = () => {
             )}
           </Form>
         </div>
-      </div>
-      <div className={styles.loginRight}>
-        <RightPanel></RightPanel>
       </div>
     </div>
   );

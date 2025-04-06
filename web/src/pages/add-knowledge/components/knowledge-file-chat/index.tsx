@@ -1,4 +1,5 @@
 import ChunkMethodModal from '@/components/chunk-method-modal';
+import PdfDrawer from '@/components/pdf-drawer';
 import SvgIcon from '@/components/svg-icon';
 import {
   useFetchNextDocumentList,
@@ -8,8 +9,7 @@ import {
 import { useSetSelectedRecord } from '@/hooks/logic-hooks';
 import { useSelectParserList } from '@/hooks/user-setting-hooks';
 import { getExtension } from '@/utils/document-util';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Button, Flex, Switch, Table, Typography } from 'antd';
+import { Flex, Switch, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -48,6 +48,11 @@ const KnowledgeFile = () => {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
+
+  // 添加PdfDrawer的状态
+  const [pdfDrawerVisible, setPdfDrawerVisible] = useState(false);
+  const [selectedDocument, setSelectedDocument] =
+    useState<IDocumentInfo | null>(null);
 
   const {
     renameLoading,
@@ -106,9 +111,13 @@ const KnowledgeFile = () => {
   // 显示文档预览的函数
   const showDocumentPreview = (document: IDocumentInfo) => {
     setRecord(document);
-    setPreviewTitle(document.name);
-    setPreviewUrl(getDocumentUrl(document.id));
-    setIsPreviewMode(true);
+    setSelectedDocument(document);
+    setPdfDrawerVisible(true);
+  };
+
+  // 隐藏PDF预览的函数
+  const hidePdfDrawer = () => {
+    setPdfDrawerVisible(false);
   };
 
   // 返回文档列表的函数
@@ -202,55 +211,22 @@ const KnowledgeFile = () => {
 
   return (
     <div className={styles.datasetWrapper}>
-      {!isPreviewMode ? (
-        // 文档列表视图
-        <>
-          <DocumentToolbar
-            selectedRowKeys={rowSelection.selectedRowKeys as string[]}
-            showCreateModal={showCreateModal}
-            showWebCrawlModal={showWebCrawlUploadModal}
-            showDocumentUploadModal={showDocumentUploadModal}
-            searchString={searchString}
-            handleInputChange={handleInputChange}
-          ></DocumentToolbar>
-          <Table
-            rowKey="id"
-            columns={finalColumns}
-            dataSource={documents}
-            pagination={pagination}
-            rowSelection={rowSelection}
-            className={styles.documentTable}
-          />
-        </>
-      ) : (
-        // 文档预览视图
-        <div className={styles.previewContainer}>
-          <div className={styles.previewHeader}>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={backToList}
-              style={{ marginRight: '10px' }}
-              type="text"
-            />
-            <Title level={4} style={{ margin: 0 }}>
-              {previewTitle}
-            </Title>
-          </div>
-          <div className={styles.previewContent}>
-            {previewUrl && (
-              <iframe
-                src={previewUrl}
-                style={{
-                  width: '100%',
-                  height: 'calc(100vh - 250px)',
-                  border: 'none',
-                }}
-                title={previewTitle}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      <DocumentToolbar
+        selectedRowKeys={rowSelection.selectedRowKeys as string[]}
+        showCreateModal={showCreateModal}
+        showWebCrawlModal={showWebCrawlUploadModal}
+        showDocumentUploadModal={showDocumentUploadModal}
+        searchString={searchString}
+        handleInputChange={handleInputChange}
+      ></DocumentToolbar>
+      <Table
+        rowKey="id"
+        columns={finalColumns}
+        dataSource={documents}
+        pagination={pagination}
+        rowSelection={rowSelection}
+        className={styles.documentTable}
+      />
 
       <CreateFileModal
         visible={createVisible}
@@ -291,6 +267,23 @@ const KnowledgeFile = () => {
         loading={webCrawlUploadLoading}
         onOk={onWebCrawlUploadOk}
       ></WebCrawlModal>
+
+      {selectedDocument && (
+        <PdfDrawer
+          visible={pdfDrawerVisible}
+          hideModal={hidePdfDrawer}
+          documentId={selectedDocument.id}
+          chunk={
+            {
+              chunk_id: '',
+              doc_id: selectedDocument.id,
+              doc_name: selectedDocument.name,
+              content_with_weight: '',
+              available_int: 1,
+            } as IChunk
+          }
+        ></PdfDrawer>
+      )}
     </div>
   );
 };

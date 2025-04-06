@@ -20,8 +20,7 @@ export const PdfDrawer = ({
       title="Document Previewer"
       onClose={hideModal}
       open={visible}
-      width="50%"
-      style={{ minWidth: '680px', maxWidth: '50%' }}
+      width="700px"
       placement="left"
       mask={false}
     >

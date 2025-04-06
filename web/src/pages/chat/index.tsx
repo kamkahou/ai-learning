@@ -268,7 +268,7 @@ const Chat = () => {
           width: '30%',
           height: '100%',
         }}
-        minWidth="600px"
+        minWidth="680px"
         maxWidth="50%"
         enable={{
           top: false,
@@ -282,7 +282,10 @@ const Chat = () => {
         }}
         className={styles.pdfPreviewerWrapper}
       >
-        <Flex vertical style={{ height: '100%' }}>
+        <Flex
+          vertical
+          style={{ height: '100%', overflow: 'auto', width: '100%' }}
+        >
           <KnowledgeFile />
         </Flex>
       </Resizable>

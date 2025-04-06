@@ -65,6 +65,7 @@ i18n
     supportedLngs: Object.values(LanguageAbbreviation),
     resources,
     fallbackLng: 'en',
+    lng: 'en', // 設置默認語言為英語
     interpolation: {
       escapeValue: false,
     },

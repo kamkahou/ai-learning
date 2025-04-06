@@ -42,7 +42,7 @@ const storage = {
     localStorage.setItem('lng', lng);
   },
   getLanguage: (): string => {
-    return localStorage.getItem('lng') as string;
+    return (localStorage.getItem('lng') as string) || 'en';
   },
 };
 

@@ -65,17 +65,16 @@ const Login = () => {
   };
 
   const toGoogle = () => {
-    window.location.href =
-      'https://github.com/login/oauth/authorize?scope=user:email&client_id=302129228f0d96055bee';
+    window.location.href = 'https://github.com/';
   };
 
   return (
     <div className={styles.loginPage}>
       <div className={styles.loginHeader}>
         <Flex justify="center" align="center" gap="middle">
-          <img src="/logo.svg" alt="logo" width={120} />
+          <img src="/logo.png" alt="logo" width={120} />
           <span style={{ fontSize: '32px', fontWeight: 'bold' }}>
-            Math Learn
+            Intelligent Instructor
           </span>
         </Flex>
       </div>
@@ -83,11 +82,6 @@ const Login = () => {
         <div className={styles.leftContainer}>
           <div className={styles.loginTitle}>
             <div>{title === 'login' ? t('login') : t('register')}</div>
-            <span>
-              {title === 'login'
-                ? t('loginDescription')
-                : t('registerDescription')}
-            </span>
           </div>
 
           <Form
@@ -132,22 +126,8 @@ const Login = () => {
               </Form.Item>
             )}
             <div>
-              {title === 'login' && registerEnabled && (
-                <div>
-                  {t('signInTip')}
-                  <Button type="link" onClick={changeTitle}>
-                    {t('signUp')}
-                  </Button>
-                </div>
-              )}
-              {title === 'register' && (
-                <div>
-                  {t('signUpTip')}
-                  <Button type="link" onClick={changeTitle}>
-                    {t('login')}
-                  </Button>
-                </div>
-              )}
+              {title === 'login' && registerEnabled && <div></div>}
+              {title === 'register' && <div></div>}
             </div>
             <Button
               type="primary"

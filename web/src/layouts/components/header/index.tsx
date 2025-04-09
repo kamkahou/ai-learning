@@ -62,7 +62,7 @@ const RagHeader = () => {
       }}
     >
       <Space size={12} className={styles.logoWrapper}>
-        <img src="/logo.svg" alt="" className={styles.appIcon} />
+        <img src="/logo.png" alt="" className={styles.appIcon} />
         <span className={styles.appName}>{appConf.appName}</span>
       </Space>
       <Space size={[0, 8]} wrap>

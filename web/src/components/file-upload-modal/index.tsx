@@ -12,8 +12,10 @@ import {
   Upload,
   UploadFile,
   UploadProps,
+  Radio,
 } from 'antd';
 import { Dispatch, SetStateAction, useState } from 'react';
+import storage from '@/utils/authorization-util';
 
 import styles from './index.less';
 
@@ -93,6 +95,9 @@ const FileUploadModal = ({
   const [parseOnCreation, setParseOnCreation] = useState(false);
   const [currentFileList, setCurrentFileList] = useState<UploadFile[]>([]);
   const [directoryFileList, setDirectoryFileList] = useState<UploadFile[]>([]);
+  const userInfo = storage.getUserInfoObject();
+  const isAdmin = userInfo?.is_superuser || userInfo?.role === 'owner';
+  const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>(isAdmin ? 'private' : 'private');
 
   const clearFileList = () => {
     if (setFileList) {
@@ -112,8 +117,8 @@ const FileUploadModal = ({
 
     const ret = await onFileUploadOk?.(
       fileList
-        ? { parseOnCreation, directoryFileList }
-        : [...currentFileList, ...directoryFileList],
+        ? { parseOnCreation, directoryFileList, visibility: fileVisibility }
+        : [...currentFileList, ...directoryFileList, { visibility: fileVisibility }],
     );
     return ret;
   };
@@ -160,6 +165,14 @@ const FileUploadModal = ({
         afterClose={afterClose}
       >
         <Flex gap={'large'} vertical>
+          <Radio.Group
+            value={fileVisibility}
+            onChange={e => setFileVisibility(e.target.value)}
+            style={{ marginBottom: 16 }}
+          >
+            {isAdmin && <Radio value="public">公共文件</Radio>}
+            <Radio value="private">我的私有文件</Radio>
+          </Radio.Group>
           <Segmented
             options={[
               { label: t('local'), value: 'local' },

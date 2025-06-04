@@ -7,7 +7,7 @@ import {
 import { useSetSelectedRecord } from '@/hooks/logic-hooks';
 import { useSelectParserList } from '@/hooks/user-setting-hooks';
 import { getExtension } from '@/utils/document-util';
-import { Divider, Flex, Switch, Table, Typography } from 'antd';
+import { Divider, Flex, Switch, Table, Typography, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
 import CreateFileModal from './create-file-modal';
@@ -32,8 +32,12 @@ import { IDocumentInfo } from '@/interfaces/database/document';
 import { formatDate } from '@/utils/date';
 import styles from './index.less';
 import { SetMetaModal } from './set-meta-modal';
+import storage from '@/utils/authorization-util';
 
 const { Text } = Typography;
+
+// 臨時型別擴充
+type IDocumentInfoWithVisibility = Partial<IDocumentInfo> & { visibility?: 'public' | 'private'; created_by?: string };
 
 const KnowledgeFile = () => {
   const { searchString, documents, pagination, handleInputChange } =
@@ -94,6 +98,11 @@ const KnowledgeFile = () => {
   } = useShowMetaModal(currentRecord.id);
 
   const rowSelection = useGetRowSelection();
+
+  const userInfo = storage.getUserInfoObject();
+  const userId = userInfo?.id;
+  const publicFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => doc.visibility === 'public');
+  const myPrivateFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => doc.visibility === 'private' && doc.created_by === userId);
 
   const columns: ColumnsType<IDocumentInfo> = [
     {
@@ -196,15 +205,30 @@ const KnowledgeFile = () => {
         searchString={searchString}
         handleInputChange={handleInputChange}
       ></DocumentToolbar>
-      <Table
-        rowKey="id"
-        columns={finalColumns}
-        dataSource={documents}
-        pagination={pagination}
-        rowSelection={rowSelection}
-        className={styles.documentTable}
-        scroll={{ scrollToFirstRowOnChange: true, x: 1300 }}
-      />
+      <Tabs defaultActiveKey="public">
+        <Tabs.TabPane tab="公共文件" key="public">
+          <Table
+            rowKey="id"
+            columns={finalColumns}
+            dataSource={publicFiles as any}
+            pagination={pagination}
+            rowSelection={rowSelection}
+            className={styles.documentTable}
+            scroll={{ scrollToFirstRowOnChange: true, x: 1300 }}
+          />
+        </Tabs.TabPane>
+        <Tabs.TabPane tab="我的私有文件" key="private">
+          <Table
+            rowKey="id"
+            columns={finalColumns}
+            dataSource={myPrivateFiles as any}
+            pagination={pagination}
+            rowSelection={rowSelection}
+            className={styles.documentTable}
+            scroll={{ scrollToFirstRowOnChange: true, x: 1300 }}
+          />
+        </Tabs.TabPane>
+      </Tabs>
       <CreateFileModal
         visible={createVisible}
         hideModal={hideCreateModal}
@@ -213,10 +237,10 @@ const KnowledgeFile = () => {
       />
       <ChunkMethodModal
         documentId={currentRecord.id}
-        parserId={currentRecord.parser_id}
+        parserId={currentRecord.parser_id as any}
         parserConfig={currentRecord.parser_config}
         documentExtension={getExtension(currentRecord.name)}
-        onOk={onChangeParserOk}
+        onOk={onChangeParserOk as any}
         visible={changeParserVisible}
         hideModal={hideChangeParserModal}
         loading={changeParserLoading}

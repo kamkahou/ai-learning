@@ -247,9 +247,12 @@ export const useUploadNextDocument = () => {
     mutateAsync,
   } = useMutation({
     mutationKey: ['uploadDocument'],
-    mutationFn: async (fileList: UploadFile[]) => {
+    mutationFn: async ({ fileList, visibility }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => {
       const formData = new FormData();
       formData.append('kb_id', knowledgeId);
+      if (visibility) {
+        formData.append('visibility', visibility);
+      }
       fileList.forEach((file: any) => {
         formData.append('file', file);
       });
@@ -272,7 +275,7 @@ export const useUploadNextDocument = () => {
     },
   });
 
-  return { uploadDocument: mutateAsync, loading, data };
+  return { uploadDocument: ({ fileList, visibility }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => mutateAsync({ fileList, visibility }), loading, data };
 };
 
 export const useNextWebCrawl = () => {

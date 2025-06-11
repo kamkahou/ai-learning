@@ -72,7 +72,7 @@ const FileUpload = ({
 
 interface IFileUploadModalProps
   extends IModalProps<
-    { parseOnCreation: boolean; directoryFileList: UploadFile[] } | UploadFile[]
+    { parseOnCreation: boolean; directoryFileList: UploadFile[]; visibility: 'public' | 'private' } | UploadFile[]
   > {
   uploadFileList?: UploadFile[];
   setUploadFileList?: Dispatch<SetStateAction<UploadFile[]>>;
@@ -91,12 +91,12 @@ const FileUploadModal = ({
   setUploadProgress,
 }: IFileUploadModalProps) => {
   const { t } = useTranslate('fileManager');
-  const [value, setValue] = useState<string | number>('local');
+  const [value, setValue] = useState<string>('local');
   const [parseOnCreation, setParseOnCreation] = useState(false);
   const [currentFileList, setCurrentFileList] = useState<UploadFile[]>([]);
   const [directoryFileList, setDirectoryFileList] = useState<UploadFile[]>([]);
   const userInfo = storage.getUserInfoObject();
-  const isAdmin = userInfo?.is_superuser || userInfo?.role === 'owner';
+  const isAdmin = userInfo?.is_superuser;
   const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>(isAdmin ? 'private' : 'private');
 
   const clearFileList = () => {
@@ -118,7 +118,7 @@ const FileUploadModal = ({
     const ret = await onFileUploadOk?.(
       fileList
         ? { parseOnCreation, directoryFileList, visibility: fileVisibility }
-        : [...currentFileList, ...directoryFileList, { visibility: fileVisibility }],
+        : currentFileList.concat(directoryFileList),
     );
     return ret;
   };
@@ -127,77 +127,63 @@ const FileUploadModal = ({
     clearFileList();
   };
 
-  const items: TabsProps['items'] = [
-    {
-      key: '1',
-      label: t('file'),
-      children: (
-        <FileUpload
-          directory={false}
-          fileList={fileList ? fileList : currentFileList}
-          setFileList={setFileList ? setFileList : setCurrentFileList}
-          uploadProgress={uploadProgress}
-        ></FileUpload>
-      ),
-    },
-    {
-      key: '2',
-      label: t('directory'),
-      children: (
-        <FileUpload
-          directory
-          fileList={directoryFileList}
-          setFileList={setDirectoryFileList}
-          uploadProgress={uploadProgress}
-        ></FileUpload>
-      ),
-    },
-  ];
-
   return (
-    <>
-      <Modal
-        title={t('uploadFile')}
-        open={visible}
-        onOk={onOk}
-        onCancel={hideModal}
-        confirmLoading={loading}
-        afterClose={afterClose}
-      >
-        <Flex gap={'large'} vertical>
-          <Radio.Group
-            value={fileVisibility}
-            onChange={e => setFileVisibility(e.target.value)}
-            style={{ marginBottom: 16 }}
-          >
-            {isAdmin && <Radio value="public">公共文件</Radio>}
-            <Radio value="private">我的私有文件</Radio>
-          </Radio.Group>
-          <Segmented
-            options={[
-              { label: t('local'), value: 'local' },
-              { label: t('s3'), value: 's3' },
-            ]}
-            block
-            value={value}
-            onChange={setValue}
-          />
-          {value === 'local' ? (
-            <>
-              <Checkbox
-                checked={parseOnCreation}
-                onChange={(e) => setParseOnCreation(e.target.checked)}
-              >
-                {t('parseOnCreation')}
-              </Checkbox>
-              <Tabs defaultActiveKey="1" items={items} />
-            </>
-          ) : (
-            t('comingSoon', { keyPrefix: 'common' })
-          )}
-        </Flex>
-      </Modal>
-    </>
+    <Modal
+      title={t('uploadFile')}
+      open={visible}
+      onOk={onOk}
+      onCancel={hideModal}
+      confirmLoading={loading}
+      afterClose={afterClose}
+    >
+      <Tabs
+        activeKey={value}
+        onChange={setValue}
+        items={[
+          {
+            key: 'local',
+            label: t('local'),
+            children: (
+              <FileUpload
+                directory={false}
+                fileList={fileList || currentFileList}
+                setFileList={setFileList || setCurrentFileList}
+                uploadProgress={uploadProgress}
+              />
+            ),
+          },
+          {
+            key: 'directory',
+            label: t('directory'),
+            children: (
+              <FileUpload
+                directory={true}
+                fileList={directoryFileList}
+                setFileList={setDirectoryFileList}
+                uploadProgress={uploadProgress}
+              />
+            ),
+          },
+        ]}
+      />
+      <div style={{ marginTop: 16 }}>
+        <Checkbox
+          checked={parseOnCreation}
+          onChange={(e) => setParseOnCreation(e.target.checked)}
+        >
+          {t('parseOnCreation')}
+        </Checkbox>
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <Radio.Group
+          value={fileVisibility}
+          onChange={(e) => setFileVisibility(e.target.value)}
+        >
+          <Radio value="private">{t('private')}</Radio>
+          <Radio value="public" disabled={!isAdmin}>{t('public')}</Radio>
+        </Radio.Group>
+      </div>
+    </Modal>
   );
 };
 

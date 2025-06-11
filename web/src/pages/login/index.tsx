@@ -126,8 +126,22 @@ const Login = () => {
               </Form.Item>
             )}
             <div>
-              {title === 'login' && registerEnabled && <div></div>}
-              {title === 'register' && <div></div>}
+              {title === 'login' && registerEnabled && (
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                  <span>{t('signInTip')}</span>
+                  <Button type="link" onClick={changeTitle}>
+                    {t('signUp')}
+                  </Button>
+                </div>
+              )}
+              {title === 'register' && (
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                  <span>{t('signUpTip')}</span>
+                  <Button type="link" onClick={changeTitle}>
+                    {t('login')}
+                  </Button>
+                </div>
+              )}
             </div>
             <Button
               type="primary"

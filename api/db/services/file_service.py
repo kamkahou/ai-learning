@@ -17,6 +17,7 @@ import logging
 import re
 import os
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 from flask_login import current_user
 from peewee import fn
@@ -54,16 +55,17 @@ class FileService(CommonService):
         #     Tuple of (file_list, total_count)
         if keywords:
             files = cls.model.select().where(
-                (cls.model.tenant_id == tenant_id),
+                ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
                 (cls.model.parent_id == pf_id),
                 (fn.LOWER(cls.model.name).contains(keywords.lower())),
                 ~(cls.model.id == pf_id)
             )
         else:
-            files = cls.model.select().where((cls.model.tenant_id == tenant_id),
-                                             (cls.model.parent_id == pf_id),
-                                             ~(cls.model.id == pf_id)
-                                             )
+            files = cls.model.select().where(
+                ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
+                (cls.model.parent_id == pf_id),
+                ~(cls.model.id == pf_id)
+            )
         count = files.count()
         if desc:
             files = files.order_by(cls.model.getter_by(orderby).desc())
@@ -78,7 +80,7 @@ class FileService(CommonService):
                 file["size"] = cls.get_folder_size(file["id"])
                 file['kbs_info'] = []
                 children = list(cls.model.select().where(
-                    (cls.model.tenant_id == tenant_id),
+                    ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
                     (cls.model.parent_id == file["id"]),
                     ~(cls.model.id == file["id"]),
                 ).dicts())
@@ -338,6 +340,9 @@ class FileService(CommonService):
         #     file: File data dictionary
         # Returns:
         #     Created file object
+        file["created_at"] = datetime.now()
+        file["updated_at"] = datetime.now()
+        file["visibility"] = file.get("visibility", "private")
         if not cls.save(**file):
             raise RuntimeError("Database error (File)!")
         return File(**file)
@@ -524,3 +529,23 @@ class FileService(CommonService):
         if re.search(r"\.(eml)$", filename):
             return ParserType.EMAIL.value
         return default
+
+    @classmethod
+    @DB.connection_context()
+    def get_by_id(cls, id):
+        file = cls.query.get(id)
+        if not file:
+            return False, None
+        return True, file
+
+    @classmethod
+    @DB.connection_context()
+    def get_public_files(cls):
+        return cls.query.filter(cls.visibility == "public").all()
+
+    @classmethod
+    @DB.connection_context()
+    def get_user_files(cls, user_id):
+        return cls.query.filter(
+            (cls.tenant_id == user_id) | (cls.visibility == "public")
+        ).all()

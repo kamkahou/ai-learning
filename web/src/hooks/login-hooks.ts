@@ -36,6 +36,8 @@ export const useLogin = () => {
           avatar: data.avatar,
           name: data.nickname,
           email: data.email,
+          is_superuser: data.is_superuser,
+          id: data.id,
         };
         authorizationUtil.setItems({
           Authorization: authorization,

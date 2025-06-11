@@ -39,6 +39,11 @@ from rag.utils.storage_factory import STORAGE_IMPL
 # @validate_request("parent_id")
 def upload():
     pf_id = request.form.get("parent_id")
+    visibility = request.form.get("visibility", "private")
+
+    if visibility == "public" and not current_user.is_superuser:
+        return get_json_result(
+            data=False, message='Only admin can upload public files!', code=settings.RetCode.PERMISSION_ERROR)
 
     if not pf_id:
         root_folder = FileService.get_root_folder(current_user.id)
@@ -108,6 +113,7 @@ def upload():
                 "name": filename,
                 "location": location,
                 "size": len(blob),
+                "visibility": visibility,
             }
             file = FileService.insert(file)
             STORAGE_IMPL.put(last_folder.id, location, blob)

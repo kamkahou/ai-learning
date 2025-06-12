@@ -51,13 +51,13 @@ const FileUpload = ({
     directory,
     fileList,
     progress: {
-      strokeWidth: 2,
+      size: 2,
     },
   };
 
   return (
     <>
-      <Progress percent={uploadProgress} showInfo={false} />
+      <Progress percent={uploadProgress} showInfo={false} size={[undefined, 2]} />
       <Dragger {...props} className={styles.uploader}>
         <p className="ant-upload-drag-icon">
           <InboxOutlined />
@@ -97,7 +97,11 @@ const FileUploadModal = ({
   const [directoryFileList, setDirectoryFileList] = useState<UploadFile[]>([]);
   const userInfo = storage.getUserInfoObject();
   const isAdmin = userInfo?.is_superuser;
-  const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>(isAdmin ? 'private' : 'private');
+  const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>('private');
+
+  console.log('Debug - User Info:', userInfo);
+  console.log('Debug - Is Admin:', isAdmin);
+  console.log('Debug - File Visibility:', fileVisibility);
 
   const clearFileList = () => {
     if (setFileList) {
@@ -114,6 +118,13 @@ const FileUploadModal = ({
       hideModal?.();
       return;
     }
+
+    console.log('Debug - Upload Parameters:', {
+      parseOnCreation,
+      directoryFileList,
+      visibility: fileVisibility,
+      fileCount: fileList ? fileList.length : currentFileList.concat(directoryFileList).length
+    });
 
     const ret = await onFileUploadOk?.(
       fileList
@@ -177,7 +188,10 @@ const FileUploadModal = ({
       <div style={{ marginTop: 16 }}>
         <Radio.Group
           value={fileVisibility}
-          onChange={(e) => setFileVisibility(e.target.value)}
+          onChange={(e) => {
+            console.log('Debug - Visibility Changed:', e.target.value);
+            setFileVisibility(e.target.value);
+          }}
         >
           <Radio value="private">{t('private')}</Radio>
           <Radio value="public" disabled={!isAdmin}>{t('public')}</Radio>

@@ -151,7 +151,7 @@ export const useHandleUploadDocument = () => {
     async ({
       parseOnCreation,
       directoryFileList,
-      visibility,
+      visibility = 'private',
     }: {
       directoryFileList: UploadFile[];
       parseOnCreation: boolean;
@@ -172,7 +172,10 @@ export const useHandleUploadDocument = () => {
           }),
         );
 
-        const ret = await uploadDocument({ fileList: filesPart, visibility });
+        const ret = await uploadDocument({ 
+          fileList: filesPart, 
+          visibility: visibility || 'private'
+        });
 
         const files = ret?.data || [];
         const succesfulFilenames = files.map((file: any) => file.name);

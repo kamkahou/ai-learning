@@ -631,6 +631,7 @@ class Document(DataBaseModel):
     process_begin_at = DateTimeField(null=True, index=True)
     process_duation = FloatField(default=0)
     meta_fields = JSONField(null=True, default={})
+    visibility = CharField(max_length=32, null=False, default="private", help_text="document visibility", index=True)
 
     run = CharField(max_length=1, null=True, help_text="start to run processing or cancel.(1: run it; 2: cancel)", default="0", index=True)
     status = CharField(max_length=1, null=True, help_text="is it validate(0: wasted, 1: validate)", default="1", index=True)
@@ -649,6 +650,7 @@ class File(DataBaseModel):
     size = IntegerField(default=0, index=True)
     type = CharField(max_length=32, null=False, help_text="file extension", index=True)
     source_type = CharField(max_length=128, null=False, default="", help_text="where dose this document come from", index=True)
+    visibility = CharField(max_length=32, null=False, default="private", help_text="file visibility", index=True)
 
     class Meta:
         db_table = "file"
@@ -799,7 +801,15 @@ class UserCanvasVersion(DataBaseModel):
 def migrate_db():
     migrator = DatabaseMigrator[settings.DATABASE_TYPE.upper()].value(DB)
     try:
+        migrate(migrator.add_column("document", "visibility", CharField(max_length=32, null=False, default="private", help_text="document visibility", index=True)))
+    except Exception:
+        pass
+    try:
         migrate(migrator.add_column("file", "source_type", CharField(max_length=128, null=False, default="", help_text="where dose this document come from", index=True)))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("file", "visibility", CharField(max_length=32, null=False, default="private", help_text="file visibility", index=True)))
     except Exception:
         pass
     try:

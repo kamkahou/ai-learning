@@ -71,31 +71,75 @@ class DocumentService(CommonService):
     @DB.connection_context()
     def get_by_kb_id(cls, kb_id, page_number, items_per_page,
                      orderby, desc, keywords):
+        # 獲取當前用戶
+        from flask_login import current_user
+        user_id = current_user.id
+
+        # 構建查詢
         if keywords:
             docs = cls.model.select().where(
                 (cls.model.kb_id == kb_id),
-                (fn.LOWER(cls.model.name).contains(keywords.lower()))
+                (fn.LOWER(cls.model.name).contains(keywords.lower())),
+                (
+                    (cls.model.visibility == 'public') |  # 公開文件
+                    ((cls.model.visibility == 'private') & (cls.model.created_by == user_id))  # 用戶自己的私有文件
+                )
             )
         else:
-            docs = cls.model.select().where(cls.model.kb_id == kb_id)
+            docs = cls.model.select().where(
+                (cls.model.kb_id == kb_id),
+                (
+                    (cls.model.visibility == 'public') |  # 公開文件
+                    ((cls.model.visibility == 'private') & (cls.model.created_by == user_id))  # 用戶自己的私有文件
+                )
+            )
+
         count = docs.count()
+
         if desc:
             docs = docs.order_by(cls.model.getter_by(orderby).desc())
         else:
             docs = docs.order_by(cls.model.getter_by(orderby).asc())
 
         docs = docs.paginate(page_number, items_per_page)
+        return list(docs.dicts()), count
 
+    @classmethod
+    @DB.connection_context()
+    def get_all_public_docs(cls, page_number, items_per_page,
+                           orderby, desc, keywords):
+        # 獲取所有公開文件
+        if keywords:
+            docs = cls.model.select().where(
+                (cls.model.visibility == 'public'),
+                (fn.LOWER(cls.model.name).contains(keywords.lower()))
+            )
+        else:
+            docs = cls.model.select().where(
+                (cls.model.visibility == 'public')
+            )
+
+        count = docs.count()
+
+        if desc:
+            docs = docs.order_by(cls.model.getter_by(orderby).desc())
+        else:
+            docs = docs.order_by(cls.model.getter_by(orderby).asc())
+
+        docs = docs.paginate(page_number, items_per_page)
         return list(docs.dicts()), count
 
     @classmethod
     @DB.connection_context()
     def insert(cls, doc):
-        if not cls.save(**doc):
-            raise RuntimeError("Database error (Document)!")
-        if not KnowledgebaseService.atomic_increase_doc_num_by_id(doc["kb_id"]):
-            raise RuntimeError("Database error (Knowledgebase)!")
-        return Document(**doc)
+        try:
+            # 使用 create 而不是 save，避免覆蓋 visibility
+            result = cls.model.create(**doc)
+            if not KnowledgebaseService.atomic_increase_doc_num_by_id(doc["kb_id"]):
+                raise RuntimeError("Database error (Knowledgebase)!")
+            return result
+        except Exception as e:
+            raise RuntimeError("Failed to save document!")
 
     @classmethod
     @DB.connection_context()

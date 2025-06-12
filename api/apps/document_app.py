@@ -54,6 +54,12 @@ from api.constants import IMG_BASE64_PREFIX
 @validate_request("kb_id")
 def upload():
     kb_id = request.form.get("kb_id")
+    visibility = request.form.get("visibility", "private")
+    
+    if visibility == "public" and not current_user.is_superuser:
+        return get_json_result(
+            data=False, message='Only admin can upload public files!', code=settings.RetCode.PERMISSION_ERROR)
+            
     if not kb_id:
         return get_json_result(
             data=False, message='Lack of "KB ID"', code=settings.RetCode.ARGUMENT_ERROR)
@@ -71,7 +77,7 @@ def upload():
     if not e:
         raise LookupError("Can't find this knowledgebase!")
 
-    err, files = FileService.upload_document(kb, file_objs, current_user.id)
+    err, files = FileService.upload_document(kb, file_objs, current_user.id, visibility)
     files = [f[0] for f in files] # remove the blob
     
     if err:
@@ -190,17 +196,42 @@ def list_docs():
     if not kb_id:
         return get_json_result(
             data=False, message='Lack of "KB ID"', code=settings.RetCode.ARGUMENT_ERROR)
+
+    # 如果是請求公開文件，直接返回
+    if kb_id == 'public':
+        keywords = request.args.get("keywords", "")
+        page_number = int(request.args.get("page", 1))
+        items_per_page = int(request.args.get("page_size", 15))
+        orderby = request.args.get("orderby", "create_time")
+        desc = request.args.get("desc", True)
+        try:
+            docs, tol = DocumentService.get_all_public_docs(
+                page_number, items_per_page, orderby, desc, keywords)
+
+            for doc_item in docs:
+                if doc_item['thumbnail'] and not doc_item['thumbnail'].startswith(IMG_BASE64_PREFIX):
+                    doc_item['thumbnail'] = f"/v1/document/image/{doc_item['kb_id']}-{doc_item['thumbnail']}"
+
+            return get_json_result(data={"total": tol, "docs": docs})
+        except Exception as e:
+            return server_error_response(e)
+
+    # 檢查用戶是否有權限訪問該知識庫
     tenants = UserTenantService.query(user_id=current_user.id)
+    has_access = False
     for tenant in tenants:
         if KnowledgebaseService.query(
                 tenant_id=tenant.tenant_id, id=kb_id):
+            has_access = True
             break
-    else:
+    
+    # 如果用戶沒有權限，返回錯誤
+    if not has_access:
         return get_json_result(
             data=False, message='Only owner of knowledgebase authorized for this operation.',
             code=settings.RetCode.OPERATING_ERROR)
-    keywords = request.args.get("keywords", "")
 
+    keywords = request.args.get("keywords", "")
     page_number = int(request.args.get("page", 1))
     items_per_page = int(request.args.get("page_size", 15))
     orderby = request.args.get("orderby", "create_time")
@@ -212,6 +243,27 @@ def list_docs():
         for doc_item in docs:
             if doc_item['thumbnail'] and not doc_item['thumbnail'].startswith(IMG_BASE64_PREFIX):
                 doc_item['thumbnail'] = f"/v1/document/image/{kb_id}-{doc_item['thumbnail']}"
+
+        return get_json_result(data={"total": tol, "docs": docs})
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route('/list_public', methods=['GET'])  # noqa: F821
+@login_required
+def list_public_docs():
+    keywords = request.args.get("keywords", "")
+    page_number = int(request.args.get("page", 1))
+    items_per_page = int(request.args.get("page_size", 15))
+    orderby = request.args.get("orderby", "create_time")
+    desc = request.args.get("desc", True)
+    try:
+        docs, tol = DocumentService.get_all_public_docs(
+            page_number, items_per_page, orderby, desc, keywords)
+
+        for doc_item in docs:
+            if doc_item['thumbnail'] and not doc_item['thumbnail'].startswith(IMG_BASE64_PREFIX):
+                doc_item['thumbnail'] = f"/v1/document/image/{doc_item['kb_id']}-{doc_item['thumbnail']}"
 
         return get_json_result(data={"total": tol, "docs": docs})
     except Exception as e:

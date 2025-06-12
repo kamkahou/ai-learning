@@ -71,22 +71,62 @@ export const useFetchNextDocumentList = () => {
     queryKey: ['fetchDocumentList', searchString, pagination],
     initialData: { docs: [], total: 0 },
     refetchInterval: 15000,
-    enabled: !!knowledgeId || !!id,
+    enabled: Boolean(knowledgeId) || Boolean(id),
     queryFn: async () => {
-      const ret = await kbService.get_document_list({
-        kb_id: knowledgeId || id,
-        keywords: searchString,
-        page_size: pagination.pageSize,
-        page: pagination.current,
-      });
-      if (ret.data.code === 0) {
-        return ret.data.data;
+      const kbId = knowledgeId || id;
+      if (!kbId) {
+        console.error('No knowledge base ID found');
+        return { docs: [], total: 0 };
       }
 
-      return {
-        docs: [],
-        total: 0,
-      };
+      try {
+        // 獲取當前知識庫的文件
+        const kbRet = await kbService.get_document_list({
+          kb_id: kbId,
+          keywords: searchString,
+          page_size: pagination.pageSize,
+          page: pagination.current,
+        });
+
+        // 獲取所有公開文件
+        const publicRet = await kbService.get_document_list({
+          kb_id: 'public',
+          keywords: searchString,
+          page_size: pagination.pageSize,
+          page: pagination.current,
+        });
+
+        if (kbRet.data.code === 0 && publicRet.data.code === 0) {
+          // 合併兩個列表，去重
+          const kbDocs = kbRet.data.data.docs || [];
+          const publicDocs = publicRet.data.data.docs || [];
+          const allDocs = [...kbDocs];
+          
+          // 添加不在當前知識庫中的公開文件
+          publicDocs.forEach((doc: IDocumentInfo) => {
+            if (!kbDocs.some((kbDoc: IDocumentInfo) => kbDoc.id === doc.id)) {
+              allDocs.push(doc);
+            }
+          });
+
+          return {
+            docs: allDocs,
+            total: kbRet.data.data.total + publicRet.data.data.total
+          };
+        }
+
+        console.error('API returned error:', kbRet.data, publicRet.data);
+        return {
+          docs: [],
+          total: 0,
+        };
+      } catch (error) {
+        console.error('Error fetching document list:', error);
+        return {
+          docs: [],
+          total: 0,
+        };
+      }
     },
   });
 
@@ -247,17 +287,23 @@ export const useUploadNextDocument = () => {
     mutateAsync,
   } = useMutation({
     mutationKey: ['uploadDocument'],
-    mutationFn: async ({ fileList, visibility }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => {
+    mutationFn: async ({ fileList, visibility = 'private' }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => {
       const formData = new FormData();
       formData.append('kb_id', knowledgeId);
-      if (visibility) {
-        formData.append('visibility', visibility);
+      formData.append('visibility', visibility);
+      if (fileList && Array.isArray(fileList)) {
+        fileList.forEach((file: any) => {
+          formData.append('file', file);
+        });
       }
-      fileList.forEach((file: any) => {
-        formData.append('file', file);
-      });
 
       try {
+        console.log('Debug - Upload FormData:', {
+          kb_id: knowledgeId,
+          visibility: visibility,
+          fileCount: fileList.length
+        });
+        
         const ret = await kbService.document_upload(formData);
         const code = get(ret, 'data.code');
 

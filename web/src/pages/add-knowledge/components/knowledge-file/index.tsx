@@ -33,6 +33,7 @@ import { formatDate } from '@/utils/date';
 import styles from './index.less';
 import { SetMetaModal } from './set-meta-modal';
 import storage from '@/utils/authorization-util';
+import { useEffect, useState } from 'react';
 
 const { Text } = Typography;
 
@@ -46,6 +47,7 @@ const KnowledgeFile = () => {
   const { setDocumentStatus } = useSetNextDocumentStatus();
   const { toChunk } = useNavigateToOtherPage();
   const { currentRecord, setRecord } = useSetSelectedRecord<IDocumentInfo>();
+  const [publicDocs, setPublicDocs] = useState<IDocumentInfoWithVisibility[]>([]);
   const {
     renameLoading,
     onRenameOk,
@@ -101,8 +103,33 @@ const KnowledgeFile = () => {
 
   const userInfo = storage.getUserInfoObject();
   const userId = userInfo?.id;
-  const publicFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => doc.visibility === 'public');
-  const myPrivateFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => doc.visibility === 'private' && doc.created_by === userId);
+  
+  // 修改過濾邏輯
+  const publicFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => 
+    doc.visibility === 'public'
+  );
+  
+  // 只顯示非公開的私有文件
+  const myPrivateFiles = (documents as IDocumentInfoWithVisibility[]).filter(doc => 
+    doc.visibility !== 'public' && doc.created_by === userId
+  );
+
+  // 獲取所有公開文件
+  const fetchPublicDocs = async () => {
+    try {
+      const response = await fetch('/v1/document/list_public');
+      const data = await response.json();
+      if (data.code === 0) {
+        setPublicDocs(data.data.docs);
+      }
+    } catch (error) {
+      console.error('Error fetching public documents:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPublicDocs();
+  }, []);
 
   const columns: ColumnsType<IDocumentInfo> = [
     {

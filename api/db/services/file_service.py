@@ -16,6 +16,7 @@
 import logging
 import re
 import os
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -53,42 +54,67 @@ class FileService(CommonService):
         #     keywords: Search keywords
         # Returns:
         #     Tuple of (file_list, total_count)
+        print("="*50)
+        print("DEBUG FileService.get_by_pf_id")
+        print("參數:")
+        print("tenant_id:", tenant_id)
+        print("pf_id:", pf_id)
+        print("page_number:", page_number)
+        print("items_per_page:", items_per_page)
+        print("orderby:", orderby)
+        print("desc:", desc)
+        print("keywords:", keywords)
+        print("="*50)
+
+        # 構建查詢條件
+        conditions = [
+            (cls.model.parent_id == pf_id),
+            ~(cls.model.id == pf_id),
+            (
+                (cls.model.visibility == "public") |  # 公開文件
+                ((cls.model.visibility == "private") & (cls.model.created_by == tenant_id))  # 用戶自己的私有文件
+            )
+        ]
+
+        # 如果有關鍵字，添加關鍵字搜索條件
         if keywords:
-            files = cls.model.select().where(
-                ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
-                (cls.model.parent_id == pf_id),
-                (fn.LOWER(cls.model.name).contains(keywords.lower())),
-                ~(cls.model.id == pf_id)
-            )
-        else:
-            files = cls.model.select().where(
-                ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
-                (cls.model.parent_id == pf_id),
-                ~(cls.model.id == pf_id)
-            )
+            conditions.append(fn.LOWER(cls.model.name).contains(keywords.lower()))
+
+        # 執行查詢
+        files = cls.model.select().where(*conditions)
         count = files.count()
+        print("查詢到的文件數量:", count)
+
+        # 排序
         if desc:
             files = files.order_by(cls.model.getter_by(orderby).desc())
         else:
             files = files.order_by(cls.model.getter_by(orderby).asc())
 
+        # 分頁
         files = files.paginate(page_number, items_per_page)
-
         res_files = list(files.dicts())
+
+        # 處理文件信息
         for file in res_files:
             if file["type"] == FileType.FOLDER.value:
                 file["size"] = cls.get_folder_size(file["id"])
                 file['kbs_info'] = []
+                # 獲取子文件夾中的文件
                 children = list(cls.model.select().where(
-                    ((cls.model.tenant_id == tenant_id) | (cls.model.visibility == "public")),
                     (cls.model.parent_id == file["id"]),
                     ~(cls.model.id == file["id"]),
+                    (
+                        (cls.model.visibility == "public") |  # 公開文件
+                        ((cls.model.visibility == "private") & (cls.model.created_by == tenant_id))  # 用戶自己的私有文件
+                    )
                 ).dicts())
-                file["has_child_folder"] = any(value["type"] == FileType.FOLDER.value for value in children)                       
+                file["has_child_folder"] = any(value["type"] == FileType.FOLDER.value for value in children)
                 continue
             kbs_info = cls.get_kb_id_by_file_id(file['id'])
             file['kbs_info'] = kbs_info
 
+        print("返回的文件列表:", json.dumps(res_files, indent=2, ensure_ascii=False))
         return res_files, count
 
     @classmethod
@@ -397,6 +423,14 @@ class FileService(CommonService):
     @classmethod
     @DB.connection_context()
     def add_file_from_kb(cls, doc, kb_folder_id, tenant_id):
+        print("="*50)
+        print("DEBUG FileService.add_file_from_kb")
+        print("參數:")
+        print("doc:", json.dumps(doc, indent=2, ensure_ascii=False))
+        print("kb_folder_id:", kb_folder_id)
+        print("tenant_id:", tenant_id)
+        print("="*50)
+        
         for _ in File2DocumentService.get_by_document_id(doc["id"]):
             return
         file = {
@@ -408,9 +442,11 @@ class FileService(CommonService):
             "type": doc["type"],
             "size": doc["size"],
             "location": doc["location"],
-            "source_type": FileSource.KNOWLEDGEBASE
+            "source_type": FileSource.KNOWLEDGEBASE,
+            "visibility": doc.get("visibility", "private")  # 使用 get 方法，如果沒有 visibility 則默認為 private
         }
-        cls.save(**file)
+        print("準備寫入文件:", json.dumps(file, indent=2, ensure_ascii=False))
+        cls.model.create(**file)  # 使用 create 而不是 save
         File2DocumentService.save(**{"id": get_uuid(), "file_id": file["id"], "document_id": doc["id"]})
     
     @classmethod
@@ -424,7 +460,15 @@ class FileService(CommonService):
 
     @classmethod
     @DB.connection_context()
-    def upload_document(self, kb, file_objs, user_id):
+    def upload_document(self, kb, file_objs, user_id, visibility='private'):
+        print("="*50)
+        print("DEBUG FileService.upload_document")
+        print("參數:")
+        print("kb_id:", kb.id)
+        print("user_id:", user_id)
+        print("visibility:", visibility)
+        print("="*50)
+        
         root_folder = self.get_root_folder(user_id)
         pf_id = root_folder["id"]
         self.init_knowledgebase_docs(pf_id, user_id)
@@ -472,8 +516,10 @@ class FileService(CommonService):
                     "name": filename,
                     "location": location,
                     "size": len(blob),
-                    "thumbnail": thumbnail_location
+                    "thumbnail": thumbnail_location,
+                    "visibility": visibility
                 }
+                print("準備寫入文件:", json.dumps(doc, indent=2, ensure_ascii=False))
                 DocumentService.insert(doc)
 
                 FileService.add_file_from_kb(doc, kb_folder["id"], kb.tenant_id)

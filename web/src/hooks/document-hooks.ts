@@ -109,9 +109,12 @@ export const useFetchNextDocumentList = () => {
             }
           });
 
+          // 計算實際的文件總數
+          const total = allDocs.length;
+
           return {
             docs: allDocs,
-            total: kbRet.data.data.total + publicRet.data.data.total
+            total: total
           };
         }
 

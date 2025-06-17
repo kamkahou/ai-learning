@@ -1,7 +1,13 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { useFetchAppConf } from '@/hooks/logic-hooks';
 import { useNavigateWithFromState } from '@/hooks/route-hook';
-// import { SearchOutlined } from '@ant-design/icons';
+import { useFetchUserInfo } from '@/hooks/user-hooks';
+import {
+  ApartmentOutlined,
+  FileTextOutlined,
+  MessageOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { Flex, Layout, Radio, Space, theme } from 'antd';
 import { MouseEventHandler, useCallback, useMemo } from 'react';
 import { useLocation } from 'umi';
@@ -21,16 +27,33 @@ const RagHeader = () => {
   const { t } = useTranslate('header');
   const appConf = useFetchAppConf();
   const { theme: themeRag } = useTheme();
-  const tagsData = useMemo(
+  const { role } = useFetchUserInfo();
+
+  const allTagsData = useMemo(
     () => [
-      // { path: '/knowledge', name: t('knowledgeBase'), icon: KnowledgeBaseIcon },
-      // { path: '/chat', name: t('chat'), icon: MessageOutlined },
-      // { path: '/search', name: t('search'), icon: SearchOutlined },
-      // { path: '/flow', name: t('flow'), icon: GraphIcon },
-      // { path: '/file', name: t('fileManager'), icon: FileIcon },
+      {
+        path: '/knowledge',
+        name: t('knowledgeBase'),
+        icon: ApartmentOutlined,
+        roles: ['admin'],
+      },
+      { path: '/chat', name: t('chat'), icon: MessageOutlined, roles: ['admin', 'user'] },
+      { path: '/search', name: t('search'), icon: SearchOutlined, roles: ['admin'] },
+      { path: '/flow', name: t('flow'), icon: ApartmentOutlined, roles: ['admin'] },
+      { path: '/file', name: t('fileManager'), icon: FileTextOutlined, roles: ['admin'] },
     ],
     [t],
   );
+
+  const tagsData = useMemo(() => {
+    if (role === 'admin') {
+      return allTagsData.filter(item => item.roles.includes('admin'));
+    }
+    if (role === 'user') {
+      return allTagsData.filter(item => item.roles.includes('user'));
+    }
+    return [];
+  }, [allTagsData, role]);
 
   const currentPath = useMemo(() => {
     return tagsData.find((x) => pathname.startsWith(x.path))?.name || 'chat';
@@ -89,7 +112,6 @@ const RagHeader = () => {
                 >
                   <item.icon
                     className={styles.radioButtonIcon}
-                    stroke={item.name === currentPath ? 'black' : 'white'}
                   ></item.icon>
                   {item.name}
                 </Flex>

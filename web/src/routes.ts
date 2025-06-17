@@ -120,6 +120,10 @@ const routes = [
         path: '/search',
         component: '@/pages/search',
       },
+      {
+        path: '/unauthorized',
+        component: '@/pages/Unauthorized',
+      },
     ],
   },
   {

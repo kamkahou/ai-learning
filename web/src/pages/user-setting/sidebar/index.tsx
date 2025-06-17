@@ -2,6 +2,7 @@ import { Domain } from '@/constants/common';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useLogout } from '@/hooks/login-hooks';
 import { useSecondPathName } from '@/hooks/route-hook';
+import { useFetchUserInfo } from '@/hooks/user-hooks';
 import { useFetchSystemVersion } from '@/hooks/user-setting-hooks';
 import type { MenuProps } from 'antd';
 import { Flex, Menu } from 'antd';
@@ -22,6 +23,7 @@ const SideBar = () => {
   const { logout } = useLogout();
   const { t } = useTranslate('setting');
   const { version, fetchSystemVersion } = useFetchSystemVersion();
+  const { role } = useFetchUserInfo();
 
   useEffect(() => {
     if (location.host !== Domain) {
@@ -52,7 +54,19 @@ const SideBar = () => {
     } as MenuItem;
   }
 
-  const items: MenuItem[] = Object.values(UserSettingRouteKey).map((value) =>
+  const menuKeys = useMemo(() => {
+    const allKeys = Object.values(UserSettingRouteKey);
+    if (role === 'user') {
+      return allKeys.filter(
+        (key) =>
+          key === UserSettingRouteKey.Password ||
+          key === UserSettingRouteKey.Logout,
+      );
+    }
+    return allKeys;
+  }, [role]);
+
+  const items: MenuItem[] = menuKeys.map((value) =>
     getItem(value, value, UserSettingIconMap[value]),
   );
 

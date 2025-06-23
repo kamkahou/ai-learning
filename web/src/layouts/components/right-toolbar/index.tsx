@@ -7,7 +7,7 @@ import { LanguageList, LanguageMap } from '@/constants/common';
 import { useChangeLanguage } from '@/hooks/logic-hooks';
 import { useFetchUserInfo, useListTenant } from '@/hooks/user-setting-hooks';
 import { TenantRole } from '@/pages/user-setting/constants';
-import { BellRing, MoonIcon, SunIcon } from 'lucide-react';
+import { BellRing, MoonIcon, SunIcon, Settings } from 'lucide-react';
 import { useNavigate } from 'umi';
 import styled from './index.less';
 
@@ -65,6 +65,10 @@ const RightToolBar = () => {
     navigate('/user-setting/team');
   }, [navigate]);
 
+  const handleSettingsClick = useCallback(() => {
+    navigate('/user-setting');
+  }, [navigate]);
+
   return (
     <div className={styled.toolbarWrapper}>
       <Space wrap size={16}>
@@ -75,6 +79,9 @@ const RightToolBar = () => {
         <Circle>
           <CircleHelp className="size-4" onClick={handleDocHelpCLick} />
         </Circle> */}
+        <Circle>
+          <Settings onClick={handleSettingsClick} size={20} />
+        </Circle>
         <Circle>
           {theme === 'dark' ? (
             <MoonIcon onClick={onMoonClick} size={20} />

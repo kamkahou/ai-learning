@@ -20,6 +20,7 @@ from api.db.db_models import Conversation, DB
 from api.db.services.api_service import API4ConversationService
 from api.db.services.common_service import CommonService
 from api.db.services.dialog_service import DialogService, chat
+from api.db.services.question_record_service import QuestionRecordService
 from api.utils import get_uuid
 import json
 
@@ -79,6 +80,25 @@ def completion(tenant_id, chat_id, question, name="New session", session_id=None
     assert name, "`name` can not be empty."
     dia = DialogService.query(id=chat_id, tenant_id=tenant_id, status=StatusEnum.VALID.value)
     assert dia, "You do not own the chat."
+
+    # 記錄用戶問題
+    user_id = kwargs.get("user_id", "")
+    ip_address = kwargs.get("ip_address")
+    user_agent = kwargs.get("user_agent")
+    
+    QuestionRecordService.record_question(
+        user_id=user_id,
+        question=question,
+        dialog_id=chat_id,
+        conversation_id=session_id,
+        source="dialog",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        session_info={
+            "tenant_id": tenant_id,
+            "session_name": name
+        }
+    )
 
     if not session_id:
         session_id = get_uuid()
@@ -152,6 +172,26 @@ def completion(tenant_id, chat_id, question, name="New session", session_id=None
 def iframe_completion(dialog_id, question, session_id=None, stream=True, **kwargs):
     e, dia = DialogService.get_by_id(dialog_id)
     assert e, "Dialog not found"
+    
+    # 記錄用戶問題 
+    user_id = kwargs.get("user_id", "")
+    ip_address = kwargs.get("ip_address")
+    user_agent = kwargs.get("user_agent")
+    
+    QuestionRecordService.record_question(
+        user_id=user_id,
+        question=question,
+        dialog_id=dialog_id,
+        conversation_id=session_id,
+        source="api",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        session_info={
+            "dialog_name": dia.name if dia else "",
+            "is_iframe": True
+        }
+    )
+    
     if not session_id:
         session_id = get_uuid()
         conv = {

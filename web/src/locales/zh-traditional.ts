@@ -539,6 +539,7 @@ export default {
       modelDescription: '在此設置模型參數和 API KEY。',
       team: '團隊',
       logout: '登出',
+      'question-record': '提問記錄',
       system: '系統',
       username: '使用者名稱',
       usernameMessage: '請輸入用戶名',

@@ -102,6 +102,10 @@ const routes = [
             path: '/user-setting/api',
             component: '@/pages/user-setting/setting-api',
           },
+          {
+            path: '/user-setting/question-record',
+            component: '@/pages/user-setting/setting-question-record',
+          },
         ],
       },
       {

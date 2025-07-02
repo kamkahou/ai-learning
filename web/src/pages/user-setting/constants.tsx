@@ -8,7 +8,7 @@ import {
 } from '@/assets/icon/Icon';
 import { LLMFactory } from '@/constants/llm';
 import { UserSettingRouteKey } from '@/constants/setting';
-import { MonitorOutlined } from '@ant-design/icons';
+import { MonitorOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 export const UserSettingIconMap = {
   [UserSettingRouteKey.Profile]: <ProfileIcon />,
@@ -18,6 +18,9 @@ export const UserSettingIconMap = {
   [UserSettingRouteKey.Team]: <TeamIcon />,
   [UserSettingRouteKey.Logout]: <LogOutIcon />,
   [UserSettingRouteKey.Api]: <ApiIcon />,
+  [UserSettingRouteKey.QuestionRecord]: (
+    <QuestionCircleOutlined style={{ fontSize: 24 }} />
+  ),
 };
 
 export * from '@/constants/setting';

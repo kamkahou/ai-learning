@@ -31,7 +31,7 @@ from playhouse.migrate import MySQLMigrator, PostgresqlMigrator, migrate
 from playhouse.pool import PooledMySQLDatabase, PooledPostgresqlDatabase
 
 from api import settings, utils
-from api.db import ParserType, SerializedType
+from api.db import ParserType, SerializedType, FileSource
 
 
 def singleton(cls, *args, **kw):
@@ -649,8 +649,28 @@ class File(DataBaseModel):
     location = CharField(max_length=255, null=True, help_text="where dose it store", index=True)
     size = IntegerField(default=0, index=True)
     type = CharField(max_length=32, null=False, help_text="file extension", index=True)
-    source_type = CharField(max_length=128, null=False, default="", help_text="where dose this document come from", index=True)
+    source_type = CharField(max_length=128, null=False, default=FileSource.KNOWLEDGEBASE.value, help_text="where dose this document come from", index=True)
     visibility = CharField(max_length=32, null=False, default="private", help_text="file visibility", index=True)
+    permission = CharField(max_length=32, default='private', help_text="File permission: private or public")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "parent_id": self.parent_id,
+            "tenant_id": self.tenant_id,
+            "created_by": self.created_by,
+            "name": self.name,
+            "location": self.location,
+            "size": self.size,
+            "type": self.type,
+            "source_type": self.source_type,
+            "visibility": self.visibility,
+            "create_time": self.create_time,
+            "create_date": self.create_date,
+            "update_time": self.update_time,
+            "update_date": self.update_date,
+            "permission": self.permission,
+        }
 
     class Meta:
         db_table = "file"
@@ -798,8 +818,27 @@ class UserCanvasVersion(DataBaseModel):
         db_table = "user_canvas_version"
 
 
+class QuestionRecord(DataBaseModel):
+    id = CharField(max_length=32, primary_key=True)
+    user_id = CharField(max_length=255, null=False, help_text="用戶 ID", index=True)
+    question = LongTextField(null=False, help_text="用戶提問內容")
+    dialog_id = CharField(max_length=32, null=True, help_text="對話 ID", index=True)
+    conversation_id = CharField(max_length=32, null=True, help_text="會話 ID", index=True)
+    source = CharField(max_length=16, null=True, help_text="提問來源：dialog|agent|api", index=True)
+    ip_address = CharField(max_length=45, null=True, help_text="用戶 IP 地址", index=True)
+    user_agent = TextField(null=True, help_text="用戶代理信息")
+    session_info = JSONField(null=True, default={}, help_text="會話相關信息")
+    
+    class Meta:
+        db_table = "question_record"
+
+
 def migrate_db():
     migrator = DatabaseMigrator[settings.DATABASE_TYPE.upper()].value(DB)
+    try:
+        migrate(migrator.add_column("file", "permission", CharField(max_length=32, default='private', help_text="File permission: private or public")))
+    except Exception:
+        pass
     try:
         migrate(migrator.add_column("document", "visibility", CharField(max_length=32, null=False, default="private", help_text="document visibility", index=True)))
     except Exception:

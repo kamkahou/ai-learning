@@ -556,6 +556,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       system: 'System',
       logout: 'Log out',
       api: 'API',
+      'question-record': 'Question Records',
       username: 'Username',
       usernameMessage: 'Please input your username!',
       photo: 'Your photo',

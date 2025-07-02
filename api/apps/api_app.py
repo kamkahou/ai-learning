@@ -17,7 +17,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta
-from flask import request, Response
+from flask import request, Response, Blueprint
 from api.db.services.llm_service import TenantLLMService
 from flask_login import login_required, current_user
 
@@ -32,6 +32,7 @@ from api.db.services.file_service import FileService
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.task_service import queue_tasks, TaskService
 from api.db.services.user_service import UserTenantService
+from api.db.services.question_record_service import QuestionRecordService
 from api import settings
 from api.utils import get_uuid, current_timestamp, datetime_format
 from api.utils.api_utils import server_error_response, get_data_error_result, get_json_result, validate_request, \
@@ -45,6 +46,9 @@ from rag.utils.storage_factory import STORAGE_IMPL
 from api.db.services.canvas_service import UserCanvasService
 from agent.canvas import Canvas
 from functools import partial
+
+
+manager = Blueprint("api_manager", __name__, url_prefix="/api/v1")
 
 
 @manager.route('/new_token', methods=['POST'])  # noqa: F821
@@ -222,6 +226,26 @@ def completion():
                 chunk_i.pop('docnm_kwd')
 
     try:
+        # 記錄用戶問題
+        user_question = msg[-1].get("content", "") if msg else ""
+        user_id = conv.user_id if hasattr(conv, 'user_id') else ""
+        ip_address = request.environ.get('REMOTE_ADDR')
+        user_agent = request.headers.get('User-Agent')
+        
+        QuestionRecordService.record_question(
+            user_id=user_id,
+            question=user_question,
+            dialog_id=conv.dialog_id,
+            conversation_id=conv.id,
+            source=conv.source if hasattr(conv, 'source') else "api",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            session_info={
+                "api_token": token,
+                "stream": req.get("stream", True)
+            }
+        )
+        
         if conv.source == "agent":
             stream = req.get("stream", True)
             conv.message.append(msg[-1])

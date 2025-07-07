@@ -645,7 +645,7 @@ class FileService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_by_id(cls, id):
-        file = cls.query.get(id)
+        file = cls.get_or_none(id=id)
         if not file:
             return False, None
         return True, file
@@ -653,11 +653,11 @@ class FileService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_public_files(cls):
-        return cls.query.filter(cls.visibility == "public").all()
+        return cls.model.select().where(cls.model.visibility == "public")
 
     @classmethod
     @DB.connection_context()
     def get_user_files(cls, user_id):
-        return cls.query.filter(
-            (cls.tenant_id == user_id) | (cls.visibility == "public")
-        ).all()
+        return cls.model.select().where(
+            (cls.model.tenant_id == user_id) | (cls.model.visibility == "public")
+        )

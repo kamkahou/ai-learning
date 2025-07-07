@@ -624,6 +624,7 @@ class Document(DataBaseModel):
     name = CharField(max_length=255, null=True, help_text="file name", index=True)
     location = CharField(max_length=255, null=True, help_text="where dose it store", index=True)
     size = IntegerField(default=0, index=True)
+    md5_hash = CharField(max_length=32, null=True, help_text="MD5 hash of file content", index=True)
     token_num = IntegerField(default=0, index=True)
     chunk_num = IntegerField(default=0, index=True)
     progress = FloatField(default=0, index=True)
@@ -934,5 +935,9 @@ def migrate_db():
         pass
     try:
         migrate(migrator.add_column("llm", "is_tools", BooleanField(null=False, help_text="support tools", default=False)))
+    except Exception:
+        pass
+    try:
+        migrate(migrator.add_column("document", "md5_hash", CharField(max_length=32, null=True, help_text="MD5 hash of file content", index=True)))
     except Exception:
         pass

@@ -17,6 +17,7 @@ import json
 import logging
 import random
 import re
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -90,22 +91,63 @@ class DocumentService(CommonService):
             # 1. Public documents from any user
             # 2. Private documents created by themselves
             conditions.append(
-                (cls.model.visibility == 'public') | (cls.model.created_by == user_id)
+                (cls.model.visibility == 'public') | 
+                (cls.model.created_by == user_id)
             )
 
         if keywords:
             conditions.append(fn.LOWER(cls.model.name).contains(keywords.lower()))
 
         docs = cls.model.select().where(*conditions)
-        count = docs.count()
-
-        if desc:
-            docs = docs.order_by(cls.model.getter_by(orderby).desc())
+        
+        # 如果是普通用户，需要额外检查授权文档
+        if not (success and user and user.is_superuser):
+            all_docs = list(docs.dicts())
+            
+            # 获取所有可能的授权文档
+            authorized_docs_query = cls.model.select().where(
+                cls.model.kb_id == kb_id,
+                cls.model.visibility == 'private',
+                cls.model.created_by != user_id
+            )
+            
+            if keywords:
+                authorized_docs_query = authorized_docs_query.where(
+                    fn.LOWER(cls.model.name).contains(keywords.lower())
+                )
+            
+            authorized_docs = list(authorized_docs_query.dicts())
+            
+            # 过滤出用户有权限的文档
+            for doc in authorized_docs:
+                if cls._is_document_visible_to_user(doc, user_id, False):
+                    all_docs.append(doc)
+            
+            # 排序
+            if desc:
+                all_docs.sort(key=lambda x: x.get(orderby, 0), reverse=True)
+            else:
+                all_docs.sort(key=lambda x: x.get(orderby, 0))
+            
+            # 分页
+            total_count = len(all_docs)
+            start_idx = (page_number - 1) * items_per_page
+            end_idx = start_idx + items_per_page
+            paginated_docs = all_docs[start_idx:end_idx]
+            
+            return paginated_docs, total_count
+        
         else:
-            docs = docs.order_by(cls.model.getter_by(orderby).asc())
+            # 超级用户的原有逻辑
+            count = docs.count()
 
-        docs = docs.paginate(page_number, items_per_page)
-        return list(docs.dicts()), count
+            if desc:
+                docs = docs.order_by(cls.model.getter_by(orderby).desc())
+            else:
+                docs = docs.order_by(cls.model.getter_by(orderby).asc())
+
+            docs = docs.paginate(page_number, items_per_page)
+            return list(docs.dicts()), count
 
     @classmethod
     @DB.connection_context()
@@ -503,6 +545,167 @@ class DocumentService(CommonService):
         except Exception:
             pass
         return False
+
+    @staticmethod
+    def calculate_file_md5(file_content):
+        """计算文件内容的MD5值"""
+        md5_hash = hashlib.md5()
+        if isinstance(file_content, bytes):
+            md5_hash.update(file_content)
+        else:
+            md5_hash.update(file_content.encode('utf-8'))
+        return md5_hash.hexdigest()
+
+    @classmethod
+    @DB.connection_context()
+    def find_duplicates_by_md5(cls, md5_hash, user_id, kb_id=None):
+        """
+        根据MD5查找重复文件
+        返回: (所有重复文件列表, 用户可见的重复文件列表, 用户不可见但存在的重复文件列表)
+        """
+        # 查找所有具有相同MD5的文件
+        all_duplicates = list(cls.model.select().where(
+            cls.model.md5_hash == md5_hash,
+            cls.model.status == StatusEnum.VALID.value
+        ).dicts())
+        
+        if not all_duplicates:
+            return [], [], []
+        
+        # 获取用户信息
+        success, user = UserService.get_by_id(user_id)
+        is_superuser = success and user and user.is_superuser
+        
+        user_visible_duplicates = []
+        user_invisible_duplicates = []
+        
+        for doc in all_duplicates:
+            # 如果指定了知识库，跳过当前知识库的文件
+            if kb_id and doc['kb_id'] == kb_id:
+                continue
+                
+            # 判断用户是否可以看到这个文件
+            if cls._is_document_visible_to_user(doc, user_id, is_superuser):
+                user_visible_duplicates.append(doc)
+            else:
+                user_invisible_duplicates.append(doc)
+        
+        return all_duplicates, user_visible_duplicates, user_invisible_duplicates
+
+    @classmethod
+    @DB.connection_context()
+    def _is_document_visible_to_user(cls, document_dict, user_id, is_superuser):
+        """判断文档是否对用户可见"""
+        # 超级用户可以看到所有文档
+        if is_superuser:
+            return True
+        
+        # 文档是公开的，或者是用户自己创建的
+        if document_dict['visibility'] == 'public' or document_dict['created_by'] == user_id:
+            return True
+        
+        # 检查用户是否在授权列表中
+        meta_fields = document_dict.get('meta_fields', {})
+        if meta_fields and isinstance(meta_fields, dict):
+            authorized_users = meta_fields.get('authorized_users', [])
+            if user_id in authorized_users:
+                return True
+        
+        return False
+
+    @classmethod
+    @DB.connection_context() 
+    def grant_document_access(cls, doc_id, user_id):
+        """为用户授权访问指定文档（通过修改可见性或添加权限记录）"""
+        try:
+            # 这里我们采用简单的方法：为用户创建一个可见性记录
+            # 在实际实现中，你可能需要更复杂的权限管理系统
+            
+            # 方法1: 将文档可见性设为public（简单但不够精细）
+            # cls.update_by_id(doc_id, {"visibility": "public"})
+            
+            # 方法2: 创建用户-文档权限关系表（需要额外的表结构）
+            # 由于当前系统结构限制，我们使用方法1的变种：
+            # 在meta_fields中记录有权限访问的用户
+            
+            success, doc = cls.get_by_id(doc_id)
+            if not success:
+                return False
+                
+            meta_fields = doc.meta_fields or {}
+            authorized_users = meta_fields.get('authorized_users', [])
+            
+            if user_id not in authorized_users:
+                authorized_users.append(user_id)
+                meta_fields['authorized_users'] = authorized_users
+                cls.update_by_id(doc_id, {"meta_fields": meta_fields})
+            
+            return True
+        except Exception as e:
+            logging.error(f"Failed to grant document access: {e}")
+            return False
+
+    @classmethod
+    @DB.connection_context()
+    def check_file_duplication(cls, file_content, user_id, kb_id):
+        """
+        检查文件重复并返回相应的处理结果
+        
+        Returns:
+            dict: {
+                'is_duplicate': bool,
+                'action': str,  # 'allow', 'deny', 'grant_access'
+                'message': str,
+                'existing_doc': dict or None,
+                'md5_hash': str
+            }
+        """
+        md5_hash = cls.calculate_file_md5(file_content)
+        
+        all_duplicates, user_visible_duplicates, user_invisible_duplicates = cls.find_duplicates_by_md5(
+            md5_hash, user_id, kb_id
+        )
+        
+        # 获取用户信息判断是否为超级用户
+        success, user = UserService.get_by_id(user_id)
+        is_superuser = success and user and user.is_superuser
+        
+        result = {
+            'is_duplicate': len(all_duplicates) > 0,
+            'md5_hash': md5_hash,
+            'existing_doc': None,
+            'action': 'allow',
+            'message': ''
+        }
+        
+        if not all_duplicates:
+            # 没有重复文件，允许上传
+            result['message'] = '文件无重复，可以上传'
+            return result
+        
+        if is_superuser:
+            # 超级用户上传，如果有重复就提醒
+            if all_duplicates:
+                result['action'] = 'deny'
+                result['existing_doc'] = all_duplicates[0]
+                result['message'] = f'文件已存在于系统中。重复文件：{all_duplicates[0]["name"]}'
+        else:
+            # 普通用户上传
+            if user_visible_duplicates:
+                # 情况2：与用户可见的文件重复
+                result['action'] = 'deny'
+                result['existing_doc'] = user_visible_duplicates[0]
+                result['message'] = f'文件与您可访问的文件重复。重复文件：{user_visible_duplicates[0]["name"]}'
+            elif user_invisible_duplicates:
+                # 情况3：与用户不可见的文件重复，授权访问已存在的文件
+                result['action'] = 'grant_access'
+                result['existing_doc'] = user_invisible_duplicates[0]
+                result['message'] = f'文件已存在于系统中，已为您授权访问。文件：{user_invisible_duplicates[0]["name"]}'
+            else:
+                # 情况1：没有重复（不应该到这里，但作为保险）
+                result['message'] = '文件无重复，可以上传'
+        
+        return result
 
 
 def queue_raptor_o_graphrag_tasks(doc, ty, priority):

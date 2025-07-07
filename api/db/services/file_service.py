@@ -489,6 +489,26 @@ class FileService(CommonService):
                 if len(file.filename) >= 128:
                     raise RuntimeError("Exceed the maximum length of file name!")
 
+                # 读取文件内容用于MD5检测
+                blob = file.read()
+                
+                # 检查文件重复
+                duplication_result = DocumentService.check_file_duplication(blob, user_id, kb.id)
+                
+                if duplication_result['action'] == 'deny':
+                    # 文件重复，拒绝上传
+                    raise RuntimeError(duplication_result['message'])
+                elif duplication_result['action'] == 'grant_access':
+                    # 文件重复但用户不可见，授权访问已存在的文件
+                    existing_doc = duplication_result['existing_doc']
+                    if DocumentService.grant_document_access(existing_doc['id'], user_id):
+                        # 返回已存在的文档信息，但不创建新文档
+                        files.append((existing_doc, blob))
+                        continue
+                    else:
+                        raise RuntimeError("授权访问已存在文件失败")
+
+                # 文件不重复或允许上传，继续正常上传流程
                 filename = duplicate_name(
                     DocumentService.query,
                     name=file.filename,
@@ -500,7 +520,7 @@ class FileService(CommonService):
                 location = filename
                 while STORAGE_IMPL.obj_exist(kb.id, location):
                     location += "_"
-                blob = file.read()
+                    
                 STORAGE_IMPL.put(kb.id, location, blob)
 
                 doc_id = get_uuid()
@@ -521,6 +541,7 @@ class FileService(CommonService):
                     "name": filename,
                     "location": location,
                     "size": len(blob),
+                    "md5_hash": duplication_result['md5_hash'],  # 添加MD5哈希
                     "thumbnail": thumbnail_location,
                     "visibility": visibility
                 }

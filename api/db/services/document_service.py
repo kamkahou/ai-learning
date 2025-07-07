@@ -37,6 +37,7 @@ from rag.nlp import rag_tokenizer, search
 from rag.settings import get_svr_queue_name
 from rag.utils.redis_conn import REDIS_CONN
 from rag.utils.storage_factory import STORAGE_IMPL
+from api.db.services.user_service import UserService
 
 
 class DocumentService(CommonService):
@@ -70,30 +71,32 @@ class DocumentService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_by_kb_id(cls, kb_id, page_number, items_per_page,
-                     orderby, desc, keywords):
-        # 獲取當前用戶
-        from flask_login import current_user
-        user_id = current_user.id
+                     orderby, desc, keywords, user_id=None):
+        # 如果没有提供user_id，尝试从Flask current_user获取
+        if user_id is None:
+            try:
+                from flask_login import current_user
+                user_id = current_user.id
+            except (ImportError, AttributeError):
+                # 如果没有Flask环境或current_user不存在，返回空结果
+                return [], 0
+        
+        success, user = UserService.get_by_id(user_id)
+        
+        conditions = [cls.model.kb_id == kb_id]
 
-        # 構建查詢
+        if not (success and user and user.is_superuser):
+            # For non-admin users, show:
+            # 1. Public documents from any user
+            # 2. Private documents created by themselves
+            conditions.append(
+                (cls.model.visibility == 'public') | (cls.model.created_by == user_id)
+            )
+
         if keywords:
-            docs = cls.model.select().where(
-                (cls.model.kb_id == kb_id),
-                (fn.LOWER(cls.model.name).contains(keywords.lower())),
-                (
-                    (cls.model.visibility == 'public') |  # 公開文件
-                    ((cls.model.visibility == 'private') & (cls.model.created_by == user_id))  # 用戶自己的私有文件
-                )
-            )
-        else:
-            docs = cls.model.select().where(
-                (cls.model.kb_id == kb_id),
-                (
-                    (cls.model.visibility == 'public') |  # 公開文件
-                    ((cls.model.visibility == 'private') & (cls.model.created_by == user_id))  # 用戶自己的私有文件
-                )
-            )
+            conditions.append(fn.LOWER(cls.model.name).contains(keywords.lower()))
 
+        docs = cls.model.select().where(*conditions)
         count = docs.count()
 
         if desc:

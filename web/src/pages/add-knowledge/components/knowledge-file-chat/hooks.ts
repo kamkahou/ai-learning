@@ -151,9 +151,11 @@ export const useHandleUploadDocument = () => {
     async ({
       parseOnCreation,
       directoryFileList,
+      visibility = 'private',
     }: {
       directoryFileList: UploadFile[];
       parseOnCreation: boolean;
+      visibility?: 'public' | 'private';
     }): Promise<number | undefined> => {
       const processFileGroup = async (filesPart: UploadFile[]) => {
         // set status to uploading on files
@@ -170,7 +172,7 @@ export const useHandleUploadDocument = () => {
           }),
         );
 
-        const ret = await uploadDocument(filesPart);
+        const ret = await uploadDocument({ fileList: filesPart, visibility });
 
         const files = ret?.data || [];
         const succesfulFilenames = files.map((file: any) => file.name);
@@ -201,7 +203,10 @@ export const useHandleUploadDocument = () => {
       const totalFiles = fileList.length;
 
       if (directoryFileList.length > 0) {
-        const ret = await uploadDocument(directoryFileList);
+        const ret = await uploadDocument({
+          fileList: directoryFileList,
+          visibility,
+        });
         if (ret?.code === 0) {
           hideDocumentUploadModal();
         }

@@ -62,9 +62,14 @@ const Chat = () => {
 
   // 在组件初始化时自动选择第一个dataset和dialog
   React.useEffect(() => {
+    if (knowledgeLoading || dialogLoading) {
+      return;
+    }
+
     if (knowledgeList?.length > 0 && dialogList?.length > 0) {
       const firstDataset = knowledgeList[0];
       const firstDialog = dialogList[0];
+
       // 通过URL参数设置选中的dataset和dialog
       const searchParams = new URLSearchParams(window.location.search);
       let needsReload = false;
@@ -85,7 +90,7 @@ const Chat = () => {
         window.location.reload();
       }
     }
-  }, [knowledgeList, dialogList]);
+  }, [knowledgeList, dialogList, knowledgeLoading, dialogLoading]);
   const { onRemoveDialog } = useDeleteDialog();
   const { onRemoveConversation } = useDeleteConversation();
   const { handleClickDialog } = useClickDialogCard();

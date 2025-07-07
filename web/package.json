@@ -16,6 +16,9 @@
       "prettier --write --ignore-unknown"
     ]
   },
+  "overrides": {
+    "@radix-ui/react-dismissable-layer": "1.1.4"
+  },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
     "@ant-design/pro-components": "^2.6.46",
@@ -110,15 +113,23 @@
     "@testing-library/jest-dom": "^6.4.5",
     "@testing-library/react": "^15.0.7",
     "@types/dompurify": "^3.0.5",
+    "@types/estree": "^1.0.8",
+    "@types/geojson": "^7946.0.16",
+    "@types/history": "^4.7.11",
+    "@types/hoist-non-react-statics": "^3.3.6",
     "@types/jest": "^29.5.12",
-    "@types/lodash": "^4.14.202",
-    "@types/react": "^18.0.33",
+    "@types/lodash": "^4.17.20",
+    "@types/ms": "^2.1.0",
+    "@types/node": "^24.0.10",
+    "@types/prop-types": "^15.7.15",
+    "@types/react": "^18.3.23",
     "@types/react-copy-to-clipboard": "^5.0.7",
-    "@types/react-dom": "^18.0.11",
-    "@types/react-syntax-highlighter": "^15.5.11",
+    "@types/react-dom": "^18.3.7",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/testing-library__jest-dom": "^6.0.0",
     "@types/uuid": "^9.0.8",
-    "@types/webpack-env": "^1.18.4",
+    "@types/webpack-env": "^1.18.8",
+    "@types/yargs": "^17.0.33",
     "@umijs/lint": "^4.1.1",
     "@umijs/plugins": "^4.1.0",
     "cross-env": "^7.0.3",
@@ -140,8 +151,5 @@
   },
   "engines": {
     "node": ">=18.20.4"
-  },
-  "overrides": {
-    "@radix-ui/react-dismissable-layer": "1.1.4"
   }
 }

@@ -20,6 +20,7 @@ from peewee import fn
 from api.db import StatusEnum, TenantPermission
 from api.db.db_models import DB, Document, Knowledgebase, Tenant, User, UserTenant
 from api.db.services.common_service import CommonService
+from api.db.services.user_service import UserService
 from api.utils import current_timestamp, datetime_format
 
 
@@ -394,3 +395,66 @@ class KnowledgebaseService(CommonService):
         data["doc_num"] = cls.model.doc_num + 1
         num = cls.model.update(data).where(cls.model.id == kb_id).execute()
         return num
+
+    @classmethod
+    @DB.connection_context()
+    def list_by_user_id(cls, user_id, page, page_size, name=None):
+        success, user = UserService.get_by_id(user_id)
+        if not success or not user:
+            return [], 0
+
+        # For non-admin users, automatically use the knowledge bases from all admin users
+        if not user.is_superuser:
+            # Get all admin users
+            admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+            
+            if not admin_users:
+                return [], 0
+
+            admin_user_ids = [admin.id for admin in admin_users]
+            
+            # Get all knowledge bases from admin users
+            query = cls.model.select(
+                cls.model,
+                User.nickname
+            ).join(
+                User, on=(cls.model.tenant_id == User.id)
+            ).where(
+                (cls.model.tenant_id.in_(admin_user_ids)) &
+                (cls.model.status == StatusEnum.VALID.value)
+            )
+
+            if name:
+                query = query.where(cls.model.name.contains(name))
+
+            count = query.count()
+            kbs = query.order_by(cls.model.update_time.desc()).paginate(page, page_size)
+
+            kbs = [m.to_dict() for m in kbs]
+            return kbs, count
+
+        # Original logic for admin users
+        tenants = UserTenant.select(UserTenant.tenant_id).where(UserTenant.user_id == user_id)
+        tenant_ids = [t.tenant_id for t in tenants]
+
+        query = cls.model.select(
+            cls.model,
+            User.nickname
+        ).join(
+            User, on=(cls.model.tenant_id == User.id)
+        ).where(
+            (
+                (cls.model.tenant_id.in_(tenant_ids) & (cls.model.permission == TenantPermission.TEAM.value)) |
+                (cls.model.tenant_id == user_id)
+            ) &
+            (cls.model.status == StatusEnum.VALID.value)
+        )
+
+        if name:
+            query = query.where(cls.model.name.contains(name))
+
+        count = query.count()
+        kbs = query.order_by(cls.model.update_time.desc()).paginate(page, page_size)
+
+        kbs = [m.to_dict() for m in kbs]
+        return kbs, count

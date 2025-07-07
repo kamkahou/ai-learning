@@ -770,6 +770,8 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       uploadLimit:
         'Each file must not exceed 10MB, and the total number of files must not exceed 128.',
       destinationFolder: 'Destination folder',
+      private: 'Private',
+      public: 'Public',
     },
     flow: {
       cite: 'Cite',

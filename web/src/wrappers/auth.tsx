@@ -4,7 +4,15 @@ import { Spin } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'umi';
 
 // Define routes accessible by a general user
-const userRoutes = ['/login', '/chat', '/user-setting/password', '/user-setting', '/unauthorized'];
+const userRoutes = [
+  '/login',
+  '/chat',
+  '/user-setting/password',
+  '/user-setting/profile',
+  '/user-setting/locale',
+  '/user-setting',
+  '/unauthorized',
+];
 
 export default () => {
   const { userInfo, isLoading, isError, role } = useFetchUserInfo();
@@ -13,7 +21,14 @@ export default () => {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -32,8 +47,13 @@ export default () => {
     }
 
     if (role === 'user') {
-      const isAllowed = userRoutes.some(route => pathname.startsWith(route));
+      const isAllowed = userRoutes.some((route) => pathname.startsWith(route));
       if (isAllowed) {
+        // 如果普通用户访问根路径，重定向到chat
+        if (pathname === '/') {
+          navigate('/chat', { replace: true });
+          return null;
+        }
         return <Outlet />;
       } else {
         navigate('/unauthorized', { replace: true });

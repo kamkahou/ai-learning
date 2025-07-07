@@ -43,3 +43,17 @@ nltk_data/
 *[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*
 .lh/
 web_backup/
+
+
+# Log files
+*.log
+ragflow_startup.log
+
+# Database files
+*.db
+test.db
+
+# Environment and virtual environment
+.env
+.venv/
+venv/

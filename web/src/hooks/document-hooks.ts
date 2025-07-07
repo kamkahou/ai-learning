@@ -1,3 +1,4 @@
+import { useFetchUserInfo } from '@/hooks/user-hooks';
 import { IReferenceChunk } from '@/interfaces/database/chat';
 import { IDocumentInfo } from '@/interfaces/database/document';
 import { IChunk } from '@/interfaces/database/knowledge';
@@ -59,77 +60,52 @@ export const useGetChunkHighlights = (
 };
 
 export const useFetchNextDocumentList = () => {
-  const { knowledgeId } = useGetKnowledgeSearchParams();
+  const { knowledgeId: knowledgeIdFromUrl } = useGetKnowledgeSearchParams();
   const { searchString, handleInputChange } = useHandleSearchChange();
   const { pagination, setPagination } = useGetPaginationWithRouter();
-  const { id } = useParams();
+  const { id: idFromParams } = useParams();
+  const { userInfo, role } = useFetchUserInfo();
 
   const { data, isFetching: loading } = useQuery<{
     docs: IDocumentInfo[];
     total: number;
+    kb_id: string;
   }>({
-    queryKey: ['fetchDocumentList', searchString, pagination],
-    initialData: { docs: [], total: 0 },
-    refetchInterval: 15000,
-    enabled: Boolean(knowledgeId) || Boolean(id),
+    queryKey: ['fetchDocumentList', userInfo?.id, searchString, pagination],
+    initialData: { docs: [], total: 0, kb_id: '' },
+    enabled: !!userInfo,
     queryFn: async () => {
-      const kbId = knowledgeId || id;
-      if (!kbId) {
-        console.error('No knowledge base ID found');
-        return { docs: [], total: 0 };
-      }
+      let kb_id = knowledgeIdFromUrl || idFromParams;
 
-      try {
-        // 獲取當前知識庫的文件
-        const kbRet = await kbService.get_document_list({
-          kb_id: kbId,
-          keywords: searchString,
-          page_size: pagination.pageSize,
-          page: pagination.current,
-        });
-
-        // 獲取所有公開文件
-        const publicRet = await kbService.get_document_list({
-          kb_id: 'public',
-          keywords: searchString,
-          page_size: pagination.pageSize,
-          page: pagination.current,
-        });
-
-        if (kbRet.data.code === 0 && publicRet.data.code === 0) {
-          // 合併兩個列表，去重
-          const kbDocs = kbRet.data.data.docs || [];
-          const publicDocs = publicRet.data.data.docs || [];
-          const allDocs = [...kbDocs];
-          
-          // 添加不在當前知識庫中的公開文件
-          publicDocs.forEach((doc: IDocumentInfo) => {
-            if (!kbDocs.some((kbDoc: IDocumentInfo) => kbDoc.id === doc.id)) {
-              allDocs.push(doc);
-            }
-          });
-
-          // 計算實際的文件總數
-          const total = allDocs.length;
-
-          return {
-            docs: allDocs,
-            total: total
-          };
+      // 如果没有从URL获取到knowledge base ID，自动获取第一个可用的知识库
+      if (!kb_id) {
+        const { data: kbData } = await kbService.getList();
+        if (kbData.data?.kbs?.length > 0) {
+          kb_id = kbData.data.kbs[0].id;
+        } else {
+          return { docs: [], total: 0, kb_id: '' };
         }
+      }
 
-        console.error('API returned error:', kbRet.data, publicRet.data);
+      if (!kb_id) {
+        return { docs: [], total: 0, kb_id: '' };
+      }
+
+      const { data: docData } = await kbService.get_document_list({
+        kb_id: kb_id,
+        keywords: searchString,
+        page_size: pagination.pageSize,
+        page: pagination.current,
+      });
+
+      if (docData.code === 0) {
         return {
-          docs: [],
-          total: 0,
-        };
-      } catch (error) {
-        console.error('Error fetching document list:', error);
-        return {
-          docs: [],
-          total: 0,
+          docs: docData.data.docs,
+          total: docData.data.total,
+          kb_id: kb_id,
         };
       }
+      return { docs: [], total: 0, kb_id: kb_id || '' };
     },
   });
 
@@ -144,8 +120,9 @@ export const useFetchNextDocumentList = () => {
   return {
     loading,
     searchString,
-    documents: data.docs,
-    pagination: { ...pagination, total: data?.total },
+    documents: data?.docs || [],
+    knowledgeId: data?.kb_id || '',
+    pagination: { ...pagination, total: data?.total || 0 },
     handleInputChange: onInputChange,
     setPagination,
   };
@@ -283,6 +260,7 @@ export const useSetNextDocumentParser = () => {
 export const useUploadNextDocument = () => {
   const queryClient = useQueryClient();
   const { knowledgeId } = useGetKnowledgeSearchParams();
+  const { userInfo, role } = useFetchUserInfo();
 
   const {
     data,
@@ -290,9 +268,32 @@ export const useUploadNextDocument = () => {
     mutateAsync,
   } = useMutation({
     mutationKey: ['uploadDocument'],
-    mutationFn: async ({ fileList, visibility = 'private' }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => {
+    mutationFn: async ({
+      fileList,
+      visibility = 'private',
+    }: {
+      fileList: UploadFile[];
+      visibility?: 'public' | 'private';
+    }) => {
+      let finalKbId = knowledgeId;
+
+      if (role !== 'admin') {
+        const { data: kbData } = await kbService.getList();
+        if (kbData.data?.kbs?.length > 0) {
+          finalKbId = kbData.data.kbs[0].id;
+        } else {
+          message.error('No default knowledge base found for upload.');
+          return;
+        }
+      }
+
+      if (!finalKbId) {
+        message.error('No knowledge base selected for upload.');
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('kb_id', knowledgeId);
+      formData.append('kb_id', finalKbId);
       formData.append('visibility', visibility);
       if (fileList && Array.isArray(fileList)) {
         fileList.forEach((file: any) => {
@@ -304,9 +305,9 @@ export const useUploadNextDocument = () => {
         console.log('Debug - Upload FormData:', {
           kb_id: knowledgeId,
           visibility: visibility,
-          fileCount: fileList.length
+          fileCount: fileList.length,
         });
-        
+
         const ret = await kbService.document_upload(formData);
         const code = get(ret, 'data.code');
 
@@ -324,7 +325,17 @@ export const useUploadNextDocument = () => {
     },
   });
 
-  return { uploadDocument: ({ fileList, visibility }: { fileList: UploadFile[]; visibility?: 'public' | 'private' }) => mutateAsync({ fileList, visibility }), loading, data };
+  return {
+    uploadDocument: ({
+      fileList,
+      visibility,
+    }: {
+      fileList: UploadFile[];
+      visibility?: 'public' | 'private';
+    }) => mutateAsync({ fileList, visibility }),
+    loading,
+    data,
+  };
 };
 
 export const useNextWebCrawl = () => {

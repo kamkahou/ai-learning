@@ -33,6 +33,7 @@ from api.db.services.file2document_service import File2DocumentService
 from api.utils import get_uuid
 from api.utils.file_utils import filename_type, thumbnail_img
 from rag.utils.storage_factory import STORAGE_IMPL
+from api.db.services.user_service import UserService
 
 
 class FileService(CommonService):
@@ -66,21 +67,23 @@ class FileService(CommonService):
         print("keywords:", keywords)
         print("="*50)
 
-        # 構建查詢條件
-        conditions = [
-            (cls.model.parent_id == pf_id),
-            ~(cls.model.id == pf_id),
-            (
-                (cls.model.visibility == "public") |  # 公開文件
-                ((cls.model.visibility == "private") & (cls.model.created_by == tenant_id))  # 用戶自己的私有文件
-            )
-        ]
+        success, user = UserService.get_by_id(tenant_id)
 
-        # 如果有關鍵字，添加關鍵字搜索條件
+        # Base condition: get children of the parent folder
+        conditions = [(cls.model.parent_id == pf_id), ~(cls.model.id == pf_id)]
+
+        if success and user and user.is_superuser:
+            # Admin sees everything under the parent folder. No other filters needed.
+            pass
+        else:
+            # Normal user sees public files and their own private files.
+            conditions.append(
+                (cls.model.permission == 'public') | (cls.model.created_by == tenant_id)
+            )
+
         if keywords:
             conditions.append(fn.LOWER(cls.model.name).contains(keywords.lower()))
 
-        # 執行查詢
         files = cls.model.select().where(*conditions)
         count = files.count()
         print("查詢到的文件數量:", count)
@@ -100,15 +103,17 @@ class FileService(CommonService):
             if file["type"] == FileType.FOLDER.value:
                 file["size"] = cls.get_folder_size(file["id"])
                 file['kbs_info'] = []
-                # 獲取子文件夾中的文件
-                children = list(cls.model.select().where(
-                    (cls.model.parent_id == file["id"]),
-                    ~(cls.model.id == file["id"]),
-                    (
-                        (cls.model.visibility == "public") |  # 公開文件
-                        ((cls.model.visibility == "private") & (cls.model.created_by == tenant_id))  # 用戶自己的私有文件
+                
+                child_conditions = [(cls.model.parent_id == file["id"]), ~(cls.model.id == file["id"])]
+                if success and user and user.is_superuser:
+                    # Admin sees everything in subfolders as well.
+                    pass
+                else:
+                    child_conditions.append(
+                        (cls.model.permission == 'public') | (cls.model.created_by == tenant_id)
                     )
-                ).dicts())
+
+                children = list(cls.model.select().where(*child_conditions).dicts())
                 file["has_child_folder"] = any(value["type"] == FileType.FOLDER.value for value in children)
                 continue
             kbs_info = cls.get_kb_id_by_file_id(file['id'])

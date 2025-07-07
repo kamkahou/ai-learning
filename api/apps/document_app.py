@@ -30,7 +30,7 @@ from api.db.db_models import File, Task
 from api.db.services.file2document_service import File2DocumentService
 from api.db.services.file_service import FileService
 from api.db.services.task_service import queue_tasks
-from api.db.services.user_service import UserTenantService
+from api.db.services.user_service import UserTenantService, UserService
 from api.db.services import duplicate_name
 from api.db.services.knowledgebase_service import KnowledgebaseService
 from api.db.services.task_service import TaskService
@@ -56,9 +56,12 @@ def upload():
     kb_id = request.form.get("kb_id")
     visibility = request.form.get("visibility", "private")
     
-    if visibility == "public" and not current_user.is_superuser:
-        return get_json_result(
-            data=False, message='Only admin can upload public files!', code=settings.RetCode.PERMISSION_ERROR)
+    # 只有管理员能上传公共文件
+    if visibility == "public":
+        success, user = UserService.get_by_id(current_user.id)
+        if not (success and user and user.is_superuser):
+            return get_json_result(
+                data=False, message='Only admin can upload public files!', code=settings.RetCode.PERMISSION_ERROR)
             
     if not kb_id:
         return get_json_result(
@@ -216,16 +219,29 @@ def list_docs():
         except Exception as e:
             return server_error_response(e)
 
-    # 檢查用戶是否有權限訪問該知識庫
-    tenants = UserTenantService.query(user_id=current_user.id)
+    # 检查知识库访问权限
     has_access = False
+    
+    # 首先检查用户是否是知识库的直接拥有者
+    tenants = UserTenantService.query(user_id=current_user.id)
     for tenant in tenants:
-        if KnowledgebaseService.query(
-                tenant_id=tenant.tenant_id, id=kb_id):
+        if KnowledgebaseService.query(tenant_id=tenant.tenant_id, id=kb_id):
             has_access = True
             break
     
-    # 如果用戶沒有權限，返回錯誤
+    # 如果用户不是直接拥有者，检查是否为普通用户访问管理员的知识库
+    if not has_access:
+        success, current_user_obj = UserService.get_by_id(current_user.id)
+        if success and current_user_obj and not current_user_obj.is_superuser:
+            # 检查该知识库是否属于管理员
+            kb_exists, kb = KnowledgebaseService.get_by_id(kb_id)
+            if kb_exists and kb:
+                # 检查知识库拥有者是否为管理员
+                kb_owner_success, kb_owner = UserService.get_by_id(kb.tenant_id)
+                if kb_owner_success and kb_owner and kb_owner.is_superuser:
+                    has_access = True
+    
+    # 如果仍然没有访问权限，返回错误
     if not has_access:
         return get_json_result(
             data=False, message='Only owner of knowledgebase authorized for this operation.',

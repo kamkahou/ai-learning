@@ -65,6 +65,17 @@ kg_retrievaler = None
 # user registration switch
 REGISTER_ENABLED = 1
 
+# 普通用户私有文件数量限制（易于修改的配置）
+MAX_PRIVATE_FILES_PER_USER = int(os.environ.get('MAX_PRIVATE_FILES_PER_USER', 3))
+
+# 普通用户文件上传限制配置
+NORMAL_USER_FILE_SIZE_LIMIT = int(os.environ.get('NORMAL_USER_FILE_SIZE_LIMIT', 30))  # MB
+NORMAL_USER_MAX_FILE_SIZE = int(os.environ.get('NORMAL_USER_MAX_FILE_SIZE', 10))     # MB per file
+
+# 管理员文件上传限制配置  
+ADMIN_FILE_SIZE_LIMIT = int(os.environ.get('ADMIN_FILE_SIZE_LIMIT', 1024))  # MB
+ADMIN_MAX_FILES_PER_BATCH = int(os.environ.get('ADMIN_MAX_FILES_PER_BATCH', 32))
+
 
 def init_settings():
     global LLM, LLM_FACTORY, LLM_BASE_URL, LIGHTEN, DATABASE_TYPE, DATABASE, FACTORY_LLM_INFOS, REGISTER_ENABLED

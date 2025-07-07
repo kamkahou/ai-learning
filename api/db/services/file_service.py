@@ -34,6 +34,7 @@ from api.utils import get_uuid
 from api.utils.file_utils import filename_type, thumbnail_img
 from rag.utils.storage_factory import STORAGE_IMPL
 from api.db.services.user_service import UserService
+from api import settings
 
 
 class FileService(CommonService):
@@ -474,6 +475,21 @@ class FileService(CommonService):
         print("visibility:", visibility)
         print("="*50)
         
+        # 检查用户是否为超级用户
+        success, user = UserService.get_by_id(user_id)
+        is_superuser = success and user and user.is_superuser
+        
+        # 如果是普通用户且上传私有文件，检查文件数量限制
+        if not is_superuser and visibility == 'private':
+            current_private_count = DocumentService.get_user_private_file_count(user_id)
+            max_allowed = settings.MAX_PRIVATE_FILES_PER_USER
+            
+            # 计算即将上传的新文件数量（不包括可能的授权访问）
+            potential_new_files = len(file_objs)
+            
+            if current_private_count + potential_new_files > max_allowed:
+                raise RuntimeError(f"普通用户最多只能拥有 {max_allowed} 个私有文件。您当前已有 {current_private_count} 个私有文件，无法再上传 {potential_new_files} 个文件。")
+        
         root_folder = self.get_root_folder(user_id)
         pf_id = root_folder["id"]
         self.init_knowledgebase_docs(pf_id, user_id)
@@ -481,6 +497,9 @@ class FileService(CommonService):
         kb_folder = self.new_a_file_from_kb(kb.tenant_id, kb.name, kb_root_folder["id"])
 
         err, files = [], []
+        # 跟踪在本次上传中实际创建的新私有文件数量
+        actual_new_private_files = 0
+        
         for file in file_objs:
             try:
                 MAX_FILE_NUM_PER_USER = int(os.environ.get('MAX_FILE_NUM_PER_USER', 0))
@@ -501,14 +520,30 @@ class FileService(CommonService):
                 elif duplication_result['action'] == 'grant_access':
                     # 文件重复但用户不可见，授权访问已存在的文件
                     existing_doc = duplication_result['existing_doc']
+                    
+                    # 对于普通用户的私有文件，即使是授权访问也要检查数量限制
+                    if not is_superuser and visibility == 'private':
+                        current_count_with_new_files = DocumentService.get_user_private_file_count(user_id) + actual_new_private_files
+                        if current_count_with_new_files >= settings.MAX_PRIVATE_FILES_PER_USER:
+                            raise RuntimeError(f"普通用户最多只能拥有 {settings.MAX_PRIVATE_FILES_PER_USER} 个私有文件。授权访问该文件会超出限制。")
+                    
                     if DocumentService.grant_document_access(existing_doc['id'], user_id):
                         # 返回已存在的文档信息，但不创建新文档
                         files.append((existing_doc, blob))
+                        # 如果是私有文件的授权访问，计入私有文件数量
+                        if not is_superuser and visibility == 'private':
+                            actual_new_private_files += 1
                         continue
                     else:
                         raise RuntimeError("授权访问已存在文件失败")
 
                 # 文件不重复或允许上传，继续正常上传流程
+                # 对于普通用户的私有文件，再次检查数量限制
+                if not is_superuser and visibility == 'private':
+                    current_count_with_new_files = DocumentService.get_user_private_file_count(user_id) + actual_new_private_files
+                    if current_count_with_new_files >= settings.MAX_PRIVATE_FILES_PER_USER:
+                        raise RuntimeError(f"普通用户最多只能拥有 {settings.MAX_PRIVATE_FILES_PER_USER} 个私有文件，无法继续上传。")
+                
                 filename = duplicate_name(
                     DocumentService.query,
                     name=file.filename,
@@ -550,6 +585,11 @@ class FileService(CommonService):
 
                 FileService.add_file_from_kb(doc, kb_folder["id"], kb.tenant_id)
                 files.append((doc, blob))
+                
+                # 如果是私有文件，增加计数
+                if not is_superuser and visibility == 'private':
+                    actual_new_private_files += 1
+                    
             except Exception as e:
                 err.append(file.filename + ": " + str(e))
 

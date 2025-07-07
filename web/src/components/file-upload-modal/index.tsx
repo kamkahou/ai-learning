@@ -1,21 +1,18 @@
 import { useTranslate } from '@/hooks/common-hooks';
 import { IModalProps } from '@/interfaces/common';
+import storage from '@/utils/authorization-util';
 import { InboxOutlined } from '@ant-design/icons';
 import {
   Checkbox,
-  Flex,
   Modal,
   Progress,
-  Segmented,
+  Radio,
   Tabs,
-  TabsProps,
   Upload,
   UploadFile,
   UploadProps,
-  Radio,
 } from 'antd';
 import { Dispatch, SetStateAction, useState } from 'react';
-import storage from '@/utils/authorization-util';
 
 import styles from './index.less';
 
@@ -26,11 +23,13 @@ const FileUpload = ({
   fileList,
   setFileList,
   uploadProgress,
+  isAdmin,
 }: {
   directory: boolean;
   fileList: UploadFile[];
   setFileList: Dispatch<SetStateAction<UploadFile[]>>;
   uploadProgress?: number;
+  isAdmin?: boolean;
 }) => {
   const { t } = useTranslate('fileManager');
   const props: UploadProps = {
@@ -57,14 +56,18 @@ const FileUpload = ({
 
   return (
     <>
-      <Progress percent={uploadProgress} showInfo={false} size={[undefined, 2]} />
+      <Progress percent={uploadProgress} showInfo={false} strokeWidth={2} />
       <Dragger {...props} className={styles.uploader}>
         <p className="ant-upload-drag-icon">
           <InboxOutlined />
         </p>
         <p className="ant-upload-text">{t('uploadTitle')}</p>
-        <p className="ant-upload-hint">{t('uploadDescription')}</p>
-        {false && <p className={styles.uploadLimit}>{t('uploadLimit')}</p>}
+        <p className="ant-upload-hint">
+          {isAdmin ? t('uploadDescriptionAdmin') : t('uploadDescription')}
+        </p>
+        <p style={{ color: 'red', fontSize: '12px' }}>
+          {isAdmin ? t('uploadLimitAdmin') : t('uploadLimit')}
+        </p>
       </Dragger>
     </>
   );
@@ -72,7 +75,12 @@ const FileUpload = ({
 
 interface IFileUploadModalProps
   extends IModalProps<
-    { parseOnCreation: boolean; directoryFileList: UploadFile[]; visibility: 'public' | 'private' } | UploadFile[]
+    | {
+        parseOnCreation: boolean;
+        directoryFileList: UploadFile[];
+        visibility: 'public' | 'private';
+      }
+    | UploadFile[]
   > {
   uploadFileList?: UploadFile[];
   setUploadFileList?: Dispatch<SetStateAction<UploadFile[]>>;
@@ -97,7 +105,9 @@ const FileUploadModal = ({
   const [directoryFileList, setDirectoryFileList] = useState<UploadFile[]>([]);
   const userInfo = storage.getUserInfoObject();
   const isAdmin = userInfo?.is_superuser;
-  const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>('private');
+  const [fileVisibility, setFileVisibility] = useState<'public' | 'private'>(
+    'private',
+  );
 
   console.log('Debug - User Info:', userInfo);
   console.log('Debug - Is Admin:', isAdmin);
@@ -123,7 +133,9 @@ const FileUploadModal = ({
       parseOnCreation,
       directoryFileList,
       visibility: fileVisibility,
-      fileCount: fileList ? fileList.length : currentFileList.concat(directoryFileList).length
+      fileCount: fileList
+        ? fileList.length
+        : currentFileList.concat(directoryFileList).length,
     });
 
     const ret = await onFileUploadOk?.(
@@ -160,6 +172,7 @@ const FileUploadModal = ({
                 fileList={fileList || currentFileList}
                 setFileList={setFileList || setCurrentFileList}
                 uploadProgress={uploadProgress}
+                isAdmin={isAdmin}
               />
             ),
           },
@@ -172,6 +185,7 @@ const FileUploadModal = ({
                 fileList={directoryFileList}
                 setFileList={setDirectoryFileList}
                 uploadProgress={uploadProgress}
+                isAdmin={isAdmin}
               />
             ),
           },
@@ -194,7 +208,9 @@ const FileUploadModal = ({
           }}
         >
           <Radio value="private">{t('private')}</Radio>
-          <Radio value="public" disabled={!isAdmin}>{t('public')}</Radio>
+          <Radio value="public" disabled={!isAdmin}>
+            {t('public')}
+          </Radio>
         </Radio.Group>
       </div>
     </Modal>

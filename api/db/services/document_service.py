@@ -707,6 +707,43 @@ class DocumentService(CommonService):
         
         return result
 
+    @classmethod
+    @DB.connection_context()
+    def get_user_private_file_count(cls, user_id):
+        """
+        计算普通用户的私有文件数量
+        包括：
+        1. 用户自己创建的私有文件
+        2. 通过重复检测授权访问的私有文件
+        不包括：
+        - 公开文件（不管是谁创建的）
+        """
+        # 1. 获取用户自己创建的私有文件数量
+        user_private_docs = cls.model.select().where(
+            cls.model.created_by == user_id,
+            cls.model.visibility == 'private',
+            cls.model.status == StatusEnum.VALID.value
+        ).count()
+        
+        # 2. 获取用户通过授权访问的私有文件数量
+        # 查找所有私有文档，检查meta_fields.authorized_users中是否包含该用户
+        all_private_docs = list(cls.model.select().where(
+            cls.model.visibility == 'private',
+            cls.model.created_by != user_id,  # 不是用户自己创建的
+            cls.model.status == StatusEnum.VALID.value
+        ).dicts())
+        
+        authorized_count = 0
+        for doc in all_private_docs:
+            meta_fields = doc.get('meta_fields', {})
+            if meta_fields and isinstance(meta_fields, dict):
+                authorized_users = meta_fields.get('authorized_users', [])
+                if user_id in authorized_users:
+                    authorized_count += 1
+        
+        total_private_count = user_private_docs + authorized_count
+        return total_private_count
+
 
 def queue_raptor_o_graphrag_tasks(doc, ty, priority):
     chunking_config = DocumentService.get_chunking_config(doc["id"])

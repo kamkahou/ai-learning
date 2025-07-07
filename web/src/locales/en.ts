@@ -54,14 +54,14 @@ export default {
     login: {
       login: 'Sign in',
       signUp: 'Sign up',
-      loginDescription: 'We’re so excited to see you again!',
+      loginDescription: "We're so excited to see you again!",
       registerDescription: 'Glad to have you on board!',
       emailLabel: 'Email',
       emailPlaceholder: 'Please input email',
       passwordLabel: 'Password',
       passwordPlaceholder: 'Please input password',
       rememberMe: 'Remember me',
-      signInTip: 'Don’t have an account?',
+      signInTip: "Don't have an account?",
       signUpTip: 'Already have an account?',
       nicknameLabel: 'Nickname',
       nicknamePlaceholder: 'Please input nickname',
@@ -267,7 +267,7 @@ export default {
       paper: `<p>Only <b>PDF</b> file is supported.</p><p>
       Papers will be split by section, such as <i>abstract, 1.1, 1.2</i>. </p><p>
       This approach enables the LLM to summarize the paper more effectively and to provide more comprehensive, understandable responses. 
-      However, it also increases the context for AI conversations and adds to the computational cost for the LLM. So during a conversation, consider reducing the value of ‘<b>topN</b>’.</p>`,
+      However, it also increases the context for AI conversations and adds to the computational cost for the LLM. So during a conversation, consider reducing the value of '<b>topN</b>'.`,
       presentation: `<p>Supported file formats are <b>PDF</b>, <b>PPTX</b>.</p><p>
       Every page in the slides is treated as a chunk, with its thumbnail image stored.</p><p>
       <i>This chunk method is automatically applied to all uploaded PPT files, so you do not need to specify it manually.</i></p>`,
@@ -479,7 +479,7 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       frequencyPenalty: 'Frequency penalty',
       frequencyPenaltyMessage: 'Frequency penalty is required',
       frequencyPenaltyTip:
-        'Similar to the presence penalty, this reduces the model’s tendency to repeat the same words frequently.',
+        "Similar to the presence penalty, this reduces the model's tendency to repeat the same words frequently.",
       maxTokens: 'Max tokens',
       maxTokensMessage: 'Max tokens is required',
       maxTokensTip: `This sets the maximum length of the model's output, measured in the number of tokens (words or pieces of words). Defaults to 512. If disabled, you lift the maximum token limit, allowing the model to determine the number of tokens in its responses.`,
@@ -774,13 +774,17 @@ This auto-tagging feature enhances retrieval by adding another layer of domain-s
       directory: 'Directory',
       uploadTitle: 'Drag and drop your file here to upload',
       uploadDescription:
-        'Supports single or batch file upload. For a locally deployed RAGFlow: the total file size limit per upload is 1GB, with a batch upload limit of 32 files. There is no cap on the total number of files per account. For demo.ragflow.io, the total file size limit per upload is 10MB, with each file not exceeding 10MB and a maximum of 128 files per account.',
+        'Supports single or batch file upload. The total file size limit per upload is 30MB, with each file not exceeding 10MB and a maximum of 3 private files per account.',
+      uploadDescriptionAdmin:
+        'Supports single or batch file upload. The total file size limit per upload is 1GB, with a batch upload limit of 32 files. There is no cap on the total number of files per account.',
       local: 'Local uploads',
       s3: 'S3 uploads',
       preview: 'Preview',
       fileError: 'File error',
       uploadLimit:
-        'Each file must not exceed 10MB, and the total number of files must not exceed 128.',
+        'Each file must not exceed 10MB, and the total number of private files must not exceed 3.',
+      uploadLimitAdmin:
+        'Each file must not exceed 32 files per batch, and there is no cap on the total number of files per account.',
       destinationFolder: 'Destination folder',
       private: 'Private',
       public: 'Public',

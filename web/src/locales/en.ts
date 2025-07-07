@@ -38,6 +38,18 @@ export default {
       previousPage: 'Previous',
       nextPage: 'Next',
       add: 'Add',
+      llmConfigReminder: {
+        title: 'LLM Configuration Required',
+        alertTitle: 'Configuration Needed',
+        alertDescription:
+          'Please configure at least one LLM model to enable chat functionality for all users.',
+        description:
+          'As an administrator, you need to configure LLM settings before users can start chatting. Once you configure the LLM models, all users will be able to inherit these settings and use the chat functionality.',
+        instruction:
+          'You can configure LLM models in User Settings > Model Configuration.',
+        later: 'Later',
+        goToSettings: 'Go to Settings',
+      },
     },
     login: {
       login: 'Sign in',

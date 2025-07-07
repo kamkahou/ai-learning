@@ -1,6 +1,9 @@
+import LlmConfigReminder from '@/components/llm-config-reminder';
+import { useCheckAdminLlmConfig } from '@/hooks/llm-config-hooks';
 import { useFetchUserInfo } from '@/hooks/user-hooks';
 import { redirectToLogin } from '@/utils/authorization-util';
 import { Spin } from 'antd';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'umi';
 
 // Define routes accessible by a general user
@@ -16,8 +19,62 @@ const userRoutes = [
 
 export default () => {
   const { userInfo, isLoading, isError, role } = useFetchUserInfo();
+  const {
+    loading: llmConfigLoading,
+    configured,
+    checkAdminConfig,
+  } = useCheckAdminLlmConfig();
+  const [showLlmReminder, setShowLlmReminder] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Check admin LLM configuration on mount and when user becomes admin
+  useEffect(() => {
+    if (role === 'admin' && userInfo && !showLlmReminder) {
+      checkAdminConfig().then((result) => {
+        if (!result.configured) {
+          setShowLlmReminder(true);
+        }
+      });
+    }
+  }, [role, userInfo, checkAdminConfig]);
+
+  // Reset reminder state when user logs out or role changes
+  useEffect(() => {
+    if (role !== 'admin') {
+      setShowLlmReminder(false);
+    }
+  }, [role]);
+
+  const handleCloseLlmReminder = () => {
+    setShowLlmReminder(false);
+  };
+
+  const handleGoToSettings = () => {
+    setShowLlmReminder(false);
+    navigate('/user-setting/model');
+  };
+
+  // Re-check configuration when returning from settings page
+  useEffect(() => {
+    if (
+      role === 'admin' &&
+      userInfo &&
+      location.pathname !== '/user-setting/model' &&
+      showLlmReminder
+    ) {
+      // Small delay to allow for potential configuration changes
+      const timeoutId = setTimeout(() => {
+        checkAdminConfig().then((result) => {
+          if (result.configured) {
+            setShowLlmReminder(false);
+          }
+        });
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [location.pathname, role, userInfo, showLlmReminder, checkAdminConfig]);
 
   if (isLoading) {
     return (
@@ -43,7 +100,16 @@ export default () => {
     const { pathname } = location;
 
     if (role === 'admin') {
-      return <Outlet />; // Admin can access all pages
+      return (
+        <>
+          <Outlet />
+          <LlmConfigReminder
+            visible={showLlmReminder}
+            onClose={handleCloseLlmReminder}
+            onGoToSettings={handleGoToSettings}
+          />
+        </>
+      );
     }
 
     if (role === 'user') {

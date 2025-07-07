@@ -329,6 +329,36 @@ def my_llms():
         return server_error_response(e)
 
 
+@manager.route('/check_admin_config', methods=['GET'])  # noqa: F821
+@login_required
+def check_admin_config():
+    """
+    Check if admin users have configured LLM settings.
+    ---
+    tags:
+      - LLM
+    security:
+      - ApiKeyAuth: []
+    responses:
+      200:
+        description: Admin LLM configuration status.
+        schema:
+          type: object
+          properties:
+            configured:
+              type: boolean
+              description: Whether admin has configured LLM.
+            message:
+              type: string
+              description: Status message.
+    """
+    try:
+        configured, message = TenantLLMService.check_admin_llm_config()
+        return get_json_result(data={"configured": configured, "message": message})
+    except Exception as e:
+        return server_error_response(e)
+
+
 @manager.route('/list', methods=['GET'])  # noqa: F821
 @login_required
 def list_app():

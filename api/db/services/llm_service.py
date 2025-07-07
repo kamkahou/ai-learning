@@ -79,6 +79,8 @@ class TenantLLMService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_model_config(cls, tenant_id, llm_type, llm_name=None):
+        from api.db.services.user_service import UserService
+        
         e, tenant = TenantService.get_by_id(tenant_id)
         if not e:
             raise LookupError("Tenant not found")
@@ -98,10 +100,50 @@ class TenantLLMService(CommonService):
         else:
             assert False, "LLM type error"
 
+        # First try to get model config from current tenant
         model_config = cls.get_api_key(tenant_id, mdlnm)
         mdlnm, fid = TenantLLMService.split_model_name_and_factory(mdlnm)
         if model_config:
             model_config = model_config.to_dict()
+        
+        # If not found, try to inherit from admin users (for non-admin users)
+        if not model_config:
+            # Check if current user is admin
+            success, user = UserService.get_by_id(tenant_id)
+            if success and user and not user.is_superuser:
+                # Get admin users' LLM configurations
+                from api.db.db_models import User
+                from api.db import StatusEnum
+                admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+                
+                for admin_user in admin_users:
+                    admin_tenant_id = admin_user.id
+                    e_admin, admin_tenant = TenantService.get_by_id(admin_tenant_id)
+                    if not e_admin:
+                        continue
+                    
+                    # Get admin's model name for this type
+                    admin_mdlnm = None
+                    if llm_type == LLMType.EMBEDDING.value:
+                        admin_mdlnm = admin_tenant.embd_id
+                    elif llm_type == LLMType.SPEECH2TEXT.value:
+                        admin_mdlnm = admin_tenant.asr_id
+                    elif llm_type == LLMType.IMAGE2TEXT.value:
+                        admin_mdlnm = admin_tenant.img2txt_id
+                    elif llm_type == LLMType.CHAT.value:
+                        admin_mdlnm = admin_tenant.llm_id
+                    elif llm_type == LLMType.RERANK:
+                        admin_mdlnm = admin_tenant.rerank_id
+                    elif llm_type == LLMType.TTS:
+                        admin_mdlnm = admin_tenant.tts_id
+                    
+                    if admin_mdlnm:
+                        admin_model_config = cls.get_api_key(admin_tenant_id, admin_mdlnm)
+                        if admin_model_config:
+                            model_config = admin_model_config.to_dict()
+                            break
+        
+        # If still not found, use default logic
         if not model_config:
             if llm_type in [LLMType.EMBEDDING, LLMType.RERANK]:
                 llm = LLMService.query(llm_name=mdlnm) if not fid else LLMService.query(llm_name=mdlnm, fid=fid)
@@ -194,6 +236,34 @@ class TenantLLMService(CommonService):
     def get_openai_models(cls):
         objs = cls.model.select().where((cls.model.llm_factory == "OpenAI"), ~(cls.model.llm_name == "text-embedding-3-small"), ~(cls.model.llm_name == "text-embedding-3-large")).dicts()
         return list(objs)
+
+    @classmethod
+    @DB.connection_context()
+    def check_admin_llm_config(cls):
+        """检查管理员是否已经配置了LLM"""
+        from api.db.db_models import User
+        from api.db import StatusEnum
+        
+        # 获取所有管理员用户
+        admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+        
+        if not admin_users:
+            return False, "No admin users found"
+        
+        # 检查是否至少有一个管理员配置了Chat LLM
+        for admin_user in admin_users:
+            admin_tenant_id = admin_user.id
+            e_admin, admin_tenant = TenantService.get_by_id(admin_tenant_id)
+            if not e_admin:
+                continue
+            
+            # 检查是否有Chat LLM配置
+            if admin_tenant.llm_id:
+                admin_model_config = cls.get_api_key(admin_tenant_id, admin_tenant.llm_id)
+                if admin_model_config:
+                    return True, "Admin LLM configured"
+        
+        return False, "No admin has configured LLM"
 
 
 class LLMBundle:

@@ -76,6 +76,12 @@ NORMAL_USER_MAX_FILE_SIZE = int(os.environ.get('NORMAL_USER_MAX_FILE_SIZE', 10))
 ADMIN_FILE_SIZE_LIMIT = int(os.environ.get('ADMIN_FILE_SIZE_LIMIT', 1024))  # MB
 ADMIN_MAX_FILES_PER_BATCH = int(os.environ.get('ADMIN_MAX_FILES_PER_BATCH', 32))
 
+# 用户 token 使用限制配置
+NORMAL_USER_TOKEN_LIMIT = int(os.environ.get('NORMAL_USER_TOKEN_LIMIT', 100000))  # 普通用户每月 token 限制
+ADMIN_USER_TOKEN_LIMIT = int(os.environ.get('ADMIN_USER_TOKEN_LIMIT', 0))        # 管理员 token 限制，0 表示无限制
+TOKEN_LIMIT_RESET_INTERVAL = os.environ.get('TOKEN_LIMIT_RESET_INTERVAL', 'monthly')  # 重置间隔：daily|weekly|monthly
+TOKEN_LIMIT_ENABLED = int(os.environ.get('TOKEN_LIMIT_ENABLED', 1))               # 是否启用 token 限制
+
 
 def init_settings():
     global LLM, LLM_FACTORY, LLM_BASE_URL, LIGHTEN, DATABASE_TYPE, DATABASE, FACTORY_LLM_INFOS, REGISTER_ENABLED

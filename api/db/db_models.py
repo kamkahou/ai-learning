@@ -26,7 +26,7 @@ import hashlib
 
 from flask_login import UserMixin
 from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
-from peewee import BigIntegerField, BooleanField, CharField, CompositeKey, DateTimeField, Field, FloatField, IntegerField, Metadata, Model, TextField
+from peewee import BigIntegerField, BooleanField, CharField, CompositeKey, DateField, DateTimeField, Field, FloatField, IntegerField, Metadata, Model, TextField
 from playhouse.migrate import MySQLMigrator, PostgresqlMigrator, migrate
 from playhouse.pool import PooledMySQLDatabase, PooledPostgresqlDatabase
 
@@ -834,6 +834,23 @@ class QuestionRecord(DataBaseModel):
         db_table = "question_record"
 
 
+class UserTokenUsage(DataBaseModel):
+    user_id = CharField(max_length=32, null=False, help_text="用戶 ID", index=True)
+    llm_type = CharField(max_length=32, null=False, help_text="LLM 類型：CHAT|EMBEDDING|RERANK|ASR|IMAGE2TEXT|TTS", index=True)
+    llm_name = CharField(max_length=128, null=False, help_text="LLM 模型名稱", index=True)
+    used_tokens = IntegerField(default=0, help_text="已使用的 token 數量", index=True)
+    token_limit = IntegerField(default=0, help_text="token 使用限制，0 表示無限制", index=True)
+    reset_date = DateField(null=True, help_text="限制重置日期", index=True)
+    is_active = BooleanField(default=True, help_text="是否啟用限制", index=True)
+
+    def __str__(self):
+        return f"{self.user_id}-{self.llm_type}-{self.llm_name}"
+
+    class Meta:
+        db_table = "user_token_usage"
+        primary_key = CompositeKey("user_id", "llm_type", "llm_name")
+
+
 def migrate_db():
     migrator = DatabaseMigrator[settings.DATABASE_TYPE.upper()].value(DB)
     try:
@@ -939,5 +956,11 @@ def migrate_db():
         pass
     try:
         migrate(migrator.add_column("document", "md5_hash", CharField(max_length=32, null=True, help_text="MD5 hash of file content", index=True)))
+    except Exception:
+        pass
+    
+    # 添加用戶 token 使用統計表
+    try:
+        UserTokenUsage.create_table()
     except Exception:
         pass

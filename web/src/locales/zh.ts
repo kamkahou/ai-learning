@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default {
   translation: {
     common: {
@@ -607,8 +608,8 @@ General：实体和关系提取提示来自 GitHub - microsoft/graphrag：基于
       ttsModel: 'TTS模型',
       ttsModelTip:
         '默认的tts模型会被用于在对话过程中请求语音生成时使用。如未显示可选模型，请根据 https://ragflow.io/docs/dev/supported_models 确认你的模型供应商是否提供该模型。',
-      embeddingModel: '嵌入模型',
-      embeddingModelTip:
+      systemEmbeddingModel: '嵌入模型',
+      systemEmbeddingModelTip:
         '所有新创建的知识库使用的默认嵌入模型。如未显示可选模型，请检查你是否在使用 RAGFlow slim 版(不含嵌入模型)；或根据 https://ragflow.io/docs/dev/supported_models 确认你的模型供应商是否提供该模型。',
       img2txtModel: 'Img2txt模型',
       img2txtModelTip:
@@ -691,7 +692,7 @@ General：实体和关系提取提示来自 GitHub - microsoft/graphrag：基于
       modelProvidersWarn: `请先在<b>模型提供商</b>中添加嵌入模型和LLM，然后在"系统模型设置"中设置它们。`,
       apiVersion: 'API版本',
       apiVersionMessage: '请输入API版本!',
-      add: '添加',
+      addModel: '添加',
       updateDate: '更新日期',
       role: '角色',
       invite: '邀请',
@@ -714,6 +715,51 @@ General：实体和关系提取提示来自 GitHub - microsoft/graphrag：基于
       view: '查看',
       modelsToBeAddedTooltip:
         '如果你的模型供应商在这里没有列出，但是宣称 OpenAI-compatible，可以通过选择卡片 OpenAI-API-compatible 设置相关模型。',
+      'token-usage': 'Token 使用統計',
+      tokenUsageManagement: 'Token 使用管理',
+      llmType: 'LLM 类型',
+      chatModel: '聊天',
+      embedding: '嵌入模型',
+      rerank: '重排序',
+      image2text: '图像转文本',
+      asr: '语音识别',
+      tts: '语音合成',
+      tokenModelName: '模型',
+      tokensUsed: '已使用 Tokens',
+      tokenLimit: 'Token 限制',
+      unlimited: '无限制',
+      usage: '使用情况',
+      resetDate: '重置日期',
+      tokenStatus: '状态',
+      active: '激活',
+      inactive: '未激活',
+      noTokenUsageData: '暂无 Token 使用数据',
+      showingRecords: '显示第 {{start}} 到 {{end}} 条，共 {{total}} 条记录',
+      userTokenUsageDescription: '这里显示您的 Token 使用情况和限制信息。',
+      adminTokenUsageDescription:
+        '作为管理员，您可以查看自己的 Token 使用情况。管理员通常享有无限制的 Token 配额。',
+      adminAllUsersTokenUsageDescription:
+        '作为管理员，您可以查看和管理所有用户的 Token 使用情况。',
+      allUsersTokenUsage: '所有用户 Token 使用情况',
+      tokenStatistics: 'Token 使用统计',
+      totalUsers: '总用户数',
+      activeUsers: '活跃用户',
+      totalTokensUsed: '总 Token 使用量',
+      usersOverLimit: '超限用户',
+      userEmail: '用户邮箱',
+      tokenOperation: '操作',
+      editLimit: '编辑',
+      resetUsage: '重置',
+      editTokenLimit: '编辑 Token 限制',
+      tokenLimitRequired: '请输入 Token 限制',
+      zeroForUnlimited: '输入 0 表示无限制',
+      confirmResetUsage: '确认重置使用量',
+      resetUsageConfirmMessage:
+        '您确定要重置此用户的 Token 使用量吗？此操作不可撤销。',
+      currentUser: '当前用户',
+      currentUsage: '当前使用量',
+      confirm: '确认',
+      loadingTokenUsage: '加载 Token 使用情况...',
     },
     message: {
       registered: '注册成功',

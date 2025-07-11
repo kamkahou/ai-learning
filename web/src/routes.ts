@@ -106,6 +106,10 @@ const routes = [
             path: '/user-setting/question-record',
             component: '@/pages/user-setting/setting-question-record',
           },
+          {
+            path: '/user-setting/token-usage',
+            component: '@/pages/user-setting/setting-token-usage',
+          },
         ],
       },
       {

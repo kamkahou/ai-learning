@@ -8,6 +8,7 @@ export enum UserSettingRouteKey {
   Api = 'api',
   Team = 'team',
   QuestionRecord = 'question-record',
+  TokenUsage = 'token-usage',
   Logout = 'logout',
 }
 

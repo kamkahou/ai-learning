@@ -18,12 +18,13 @@ import json
 import re
 from datetime import datetime
 
-from flask import request, session, redirect
+from flask import request, session, redirect, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_required, current_user, login_user, logout_user
 
 from api.db.db_models import TenantLLM
 from api.db.services.llm_service import TenantLLMService, LLMService
+from api.db.services.user_token_service import UserTokenService
 from api.utils.api_utils import (
     server_error_response,
     validate_request,
@@ -42,6 +43,9 @@ from api import settings
 from api.db.services.user_service import UserService, TenantService, UserTenantService
 from api.db.services.file_service import FileService
 from api.utils.api_utils import get_json_result, construct_response
+
+
+manager = Blueprint("user_manager", __name__, url_prefix="/api/v1")
 
 
 @manager.route("/login", methods=["POST", "GET"])  # noqa: F821
@@ -708,5 +712,305 @@ def set_tenant_info():
         tid = req.pop("tenant_id")
         TenantService.update_by_id(tid, req)
         return get_json_result(data=True)
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/token_usage", methods=["GET"])  # noqa: F821
+@login_required
+def get_user_token_usage():
+    """
+    Get user's token usage information.
+    ---
+    tags:
+      - User Token
+    security:
+      - ApiKeyAuth: []
+    responses:
+      200:
+        description: User token usage retrieved successfully.
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  llm_type:
+                    type: string
+                    description: LLM type (CHAT, EMBEDDING, etc.)
+                  llm_name:
+                    type: string
+                    description: LLM model name
+                  used_tokens:
+                    type: integer
+                    description: Used tokens count
+                  token_limit:
+                    type: integer
+                    description: Token limit (0 for unlimited)
+                  reset_date:
+                    type: string
+                    description: Next reset date
+                  is_active:
+                    type: boolean
+                    description: Whether limit is active
+    """
+    try:
+        usage_data = UserTokenService.get_user_token_usage(current_user.id)
+        return get_json_result(data=usage_data)
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/token_usage/reset", methods=["POST"])  # noqa: F821
+@login_required
+def reset_user_token_usage():
+    """
+    Reset user's token usage (Admin only).
+    ---
+    tags:
+      - User Token
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - in: body
+        name: body
+        description: Reset parameters.
+        schema:
+          type: object
+          properties:
+            user_id:
+              type: string
+              description: User ID to reset (admin only, optional for self-reset)
+            llm_type:
+              type: string
+              description: LLM type to reset (optional, resets all if not specified)
+            llm_name:
+              type: string
+              description: LLM model name to reset (optional, resets all if not specified)
+    responses:
+      200:
+        description: Token usage reset successfully.
+        schema:
+          type: object
+    """
+    try:
+        req = request.json or {}
+        target_user_id = req.get("user_id")
+        llm_type = req.get("llm_type")
+        llm_name = req.get("llm_name")
+        
+        # 如果指定了其他用戶ID，檢查當前用戶是否為管理員
+        if target_user_id and target_user_id != current_user.id:
+            if not current_user.is_superuser:
+                return get_json_result(
+                    data=False,
+                    message="Only administrators can reset other users' token usage",
+                    code=settings.RetCode.PERMISSION_ERROR
+                )
+        else:
+            target_user_id = current_user.id
+        
+        success = UserTokenService.reset_user_token_usage(target_user_id, llm_type, llm_name)
+        if success:
+            return get_json_result(data=True, message="Token usage reset successfully")
+        else:
+            return get_json_result(
+                data=False,
+                message="Failed to reset token usage",
+                code=settings.RetCode.EXCEPTION_ERROR
+            )
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/token_usage/set_limit", methods=["POST"])  # noqa: F821
+@login_required
+@validate_request("llm_type", "llm_name", "token_limit")
+def set_user_token_limit():
+    """
+    Set user's token limit (Admin only).
+    ---
+    tags:
+      - User Token
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - in: body
+        name: body
+        description: Token limit settings.
+        required: true
+        schema:
+          type: object
+          properties:
+            user_id:
+              type: string
+              description: User ID (admin only, optional for self-setting)
+            llm_type:
+              type: string
+              description: LLM type
+            llm_name:
+              type: string
+              description: LLM model name
+            token_limit:
+              type: integer
+              description: Token limit (0 for unlimited)
+    responses:
+      200:
+        description: Token limit set successfully.
+        schema:
+          type: object
+    """
+    try:
+        req = request.json
+        target_user_id = req.get("user_id")
+        llm_type = req["llm_type"]
+        llm_name = req["llm_name"]
+        token_limit = int(req["token_limit"])
+        
+        # 如果指定了其他用戶ID，檢查當前用戶是否為管理員
+        if target_user_id and target_user_id != current_user.id:
+            if not current_user.is_superuser:
+                return get_json_result(
+                    data=False,
+                    message="Only administrators can set other users' token limits",
+                    code=settings.RetCode.PERMISSION_ERROR
+                )
+        else:
+            target_user_id = current_user.id
+        
+        success = UserTokenService.set_user_token_limit(target_user_id, llm_type, llm_name, token_limit)
+        if success:
+            return get_json_result(data=True, message="Token limit set successfully")
+        else:
+            return get_json_result(
+                data=False,
+                message="Failed to set token limit",
+                code=settings.RetCode.EXCEPTION_ERROR
+            )
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/admin/token_usage/statistics", methods=["GET"])  # noqa: F821
+@login_required
+def get_token_usage_statistics():
+    """
+    Get token usage statistics overview (Admin only).
+    ---
+    tags:
+      - Admin Token Management
+    security:
+      - ApiKeyAuth: []
+    responses:
+      200:
+        description: Token usage statistics retrieved successfully.
+        schema:
+          type: object
+          properties:
+            total_users:
+              type: integer
+              description: Total number of users
+            users_with_limits:
+              type: integer
+              description: Number of users with token limits
+            total_tokens_used:
+              type: integer
+              description: Total tokens used across all users
+            tokens_by_type:
+              type: object
+              description: Token usage by LLM type
+            statistics_date:
+              type: string
+              description: Statistics generation date
+    """
+    try:
+        if not current_user.is_superuser:
+            return get_json_result(
+                data=False,
+                message="Only administrators can access token usage statistics",
+                code=settings.RetCode.PERMISSION_ERROR
+            )
+        
+        statistics = UserTokenService.get_token_usage_statistics()
+        return get_json_result(data=statistics)
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/admin/token_usage/users", methods=["GET"])  # noqa: F821
+@login_required
+def get_all_users_token_usage():
+    """
+    Get all users' token usage (Admin only).
+    ---
+    tags:
+      - Admin Token Management
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - in: query
+        name: limit
+        type: integer
+        default: 100
+        description: Maximum number of records to return
+      - in: query
+        name: offset
+        type: integer
+        default: 0
+        description: Number of records to skip
+    responses:
+      200:
+        description: All users' token usage retrieved successfully.
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                    description: User ID
+                  nickname:
+                    type: string
+                    description: User nickname
+                  email:
+                    type: string
+                    description: User email
+                  is_superuser:
+                    type: boolean
+                    description: Whether user is admin
+                  llm_type:
+                    type: string
+                    description: LLM type
+                  llm_name:
+                    type: string
+                    description: LLM model name
+                  used_tokens:
+                    type: integer
+                    description: Used tokens count
+                  token_limit:
+                    type: integer
+                    description: Token limit
+                  reset_date:
+                    type: string
+                    description: Next reset date
+    """
+    try:
+        if not current_user.is_superuser:
+            return get_json_result(
+                data=False,
+                message="Only administrators can access all users' token usage",
+                code=settings.RetCode.PERMISSION_ERROR
+            )
+        
+        limit = int(request.args.get("limit", 100))
+        offset = int(request.args.get("offset", 0))
+        
+        usage_data = UserTokenService.get_all_users_token_usage(limit, offset)
+        return get_json_result(data=usage_data)
     except Exception as e:
         return server_error_response(e)

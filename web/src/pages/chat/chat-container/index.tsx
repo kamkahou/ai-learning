@@ -13,6 +13,7 @@ import { buildMessageItemReference } from '../utils';
 import MessageInput from '@/components/message-input-without-upload';
 import PdfDrawer from '@/components/pdf-drawer';
 import { useClickDrawer } from '@/components/pdf-drawer/hooks';
+import TokenUsageBar from '@/components/token-usage-bar';
 import {
   useFetchNextConversation,
   useGetChatSearchParams,
@@ -90,6 +91,7 @@ const ChatContainer = ({ controller }: IProps) => {
           </div>
           <div ref={ref} />
         </Flex>
+        <TokenUsageBar />
         <MessageInput
           disabled={disabled}
           sendDisabled={sendDisabled}

@@ -23,6 +23,7 @@ from api.db.db_models import DB, LLM, LLMFactories, TenantLLM
 from api.db.services.common_service import CommonService
 from api.db.services.langfuse_service import TenantLangfuseService
 from api.db.services.user_service import TenantService
+from api.db.services.user_token_service import UserTokenService
 from rag.llm import ChatModel, CvModel, EmbeddingModel, RerankModel, Seq2txtModel, TTSModel
 
 
@@ -267,8 +268,9 @@ class TenantLLMService(CommonService):
 
 
 class LLMBundle:
-    def __init__(self, tenant_id, llm_type, llm_name=None, lang="Chinese"):
+    def __init__(self, tenant_id, llm_type, llm_name=None, lang="Chinese", user_id=None):
         self.tenant_id = tenant_id
+        self.user_id = user_id or tenant_id  # 如果沒有提供用戶ID，使用tenant_id作為默認值
         self.llm_type = llm_type
         self.llm_name = llm_name
         self.mdl = TenantLLMService.model_instance(tenant_id, llm_type, llm_name, lang=lang)
@@ -285,13 +287,70 @@ class LLMBundle:
         else:
             self.langfuse = None
 
+    def _check_and_record_token_usage(self, tokens_to_use: int, operation_name: str = "") -> bool:
+        """
+        檢查和記錄用戶 token 使用量
+        
+        Args:
+            tokens_to_use: 即將使用的 token 數量
+            operation_name: 操作名稱，用於日誌記錄
+            
+        Returns:
+            bool: 是否允許使用 token
+        """
+        # 使用實際的 LLM 名稱進行限制檢查
+        actual_llm_name = self.llm_name or "default"
+        
+        # 檢查 token 限制
+        can_use, error_msg = UserTokenService.check_token_limit(
+            self.user_id, self.llm_type, actual_llm_name, tokens_to_use
+        )
+        
+        if not can_use:
+            logging.warning(f"Token limit exceeded for user {self.user_id} in {operation_name}: {error_msg}")
+            return False
+            
+        return True
+
+    def _record_token_usage(self, tokens_used: int, operation_name: str = ""):
+        """
+        記錄用戶 token 使用量
+        
+        Args:
+            tokens_used: 已使用的 token 數量
+            operation_name: 操作名稱，用於日誌記錄
+        """
+        # 使用實際的 LLM 名稱進行使用量記錄
+        actual_llm_name = self.llm_name or "default"
+        
+        # 記錄用戶 token 使用量
+        success = UserTokenService.increase_token_usage(
+            self.user_id, self.llm_type, actual_llm_name, tokens_used
+        )
+        
+        if not success:
+            logging.error(f"Failed to record token usage for user {self.user_id} in {operation_name}: {tokens_used} tokens")
+        
+        # 同時記錄租戶級別的使用量（保持原有邏輯）
+        if not TenantLLMService.increase_usage(self.tenant_id, self.llm_type, tokens_used, self.llm_name):
+            logging.error(f"LLMBundle.{operation_name} can't update tenant token usage for {self.tenant_id}/{self.llm_type} used_tokens: {tokens_used}")
+
     def encode(self, texts: list):
+        # 預估 token 使用量
+        estimated_tokens = sum(len(text.split()) for text in texts) * 2
+        
+        # 檢查 token 限制
+        if not self._check_and_record_token_usage(estimated_tokens, "encode"):
+            return [], 0
+        
         if self.langfuse:
             generation = self.trace.generation(name="encode", model=self.llm_name, input={"texts": texts})
 
         embeddings, used_tokens = self.mdl.encode(texts)
-        if not TenantLLMService.increase_usage(self.tenant_id, self.llm_type, used_tokens):
-            logging.error("LLMBundle.encode can't update token usage for {}/EMBEDDING used_tokens: {}".format(self.tenant_id, used_tokens))
+        
+        # 記錄實際使用的 token 數量
+        if used_tokens > 0:
+            self._record_token_usage(used_tokens, "encode")
 
         if self.langfuse:
             generation.end(usage_details={"total_tokens": used_tokens})
@@ -378,12 +437,22 @@ class LLMBundle:
             span.end()
 
     def chat(self, system, history, gen_conf):
+        # 預估 token 使用量（基於輸入長度的粗略估算）
+        input_text = (system or "") + " ".join([msg.get("content", "") for msg in history])
+        estimated_tokens = len(input_text.split()) * 2  # 粗略估算：每個詞約2個token
+        
+        # 檢查 token 限制
+        if not self._check_and_record_token_usage(estimated_tokens, "chat"):
+            return "**ERROR**: Token 使用量已達到限制，無法繼續對話。", 0
+        
         if self.langfuse:
             generation = self.trace.generation(name="chat", model=self.llm_name, input={"system": system, "history": history})
 
         txt, used_tokens = self.mdl.chat(system, history, gen_conf)
-        if isinstance(txt, int) and not TenantLLMService.increase_usage(self.tenant_id, self.llm_type, used_tokens, self.llm_name):
-            logging.error("LLMBundle.chat can't update token usage for {}/CHAT llm_name: {}, used_tokens: {}".format(self.tenant_id, self.llm_name, used_tokens))
+        
+        # 記錄實際使用的 token 數量
+        if isinstance(used_tokens, int) and used_tokens > 0:
+            self._record_token_usage(used_tokens, "chat")
 
         if self.langfuse:
             generation.end(output={"output": txt}, usage_details={"total_tokens": used_tokens})
@@ -391,6 +460,15 @@ class LLMBundle:
         return txt
 
     def chat_streamly(self, system, history, gen_conf):
+        # 預估 token 使用量（基於輸入長度的粗略估算）
+        input_text = (system or "") + " ".join([msg.get("content", "") for msg in history])
+        estimated_tokens = len(input_text.split()) * 2  # 粗略估算：每個詞約2個token
+        
+        # 檢查 token 限制
+        if not self._check_and_record_token_usage(estimated_tokens, "chat_streamly"):
+            yield "**ERROR**: Token 使用量已達到限制，無法繼續對話。"
+            return
+        
         if self.langfuse:
             generation = self.trace.generation(name="chat_streamly", model=self.llm_name, input={"system": system, "history": history})
 
@@ -400,8 +478,9 @@ class LLMBundle:
                 if self.langfuse:
                     generation.end(output={"output": ans})
 
-                if not TenantLLMService.increase_usage(self.tenant_id, self.llm_type, txt, self.llm_name):
-                    logging.error("LLMBundle.chat_streamly can't update token usage for {}/CHAT llm_name: {}, content: {}".format(self.tenant_id, self.llm_name, txt))
+                # 記錄實際使用的 token 數量
+                if txt > 0:
+                    self._record_token_usage(txt, "chat_streamly")
                 return ans
 
             if txt.endswith("</think>"):

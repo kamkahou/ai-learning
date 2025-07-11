@@ -27,8 +27,11 @@ export const useCheckAdminLlmConfig = () => {
           setConfigured(data.data.configured);
           return data.data;
         } else {
-          console.error('Failed to check admin LLM config:', data.retmsg);
-          return { configured: true, message: 'Check failed' };
+          console.error(
+            'Failed to check admin LLM config:',
+            data.retmsg || 'Unknown error',
+          );
+          return { configured: true, message: data.retmsg || 'Check failed' };
         }
       } catch (error) {
         console.error('Error checking admin LLM config:', error);

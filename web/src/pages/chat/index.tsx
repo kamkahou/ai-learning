@@ -281,11 +281,11 @@ const Chat = () => {
     <Flex className={styles.chatWrapper}>
       <Resizable
         defaultSize={{
-          width: '30%',
+          width: '25%',
           height: '100%',
         }}
-        minWidth="680px"
-        maxWidth="680px"
+        minWidth="400px"
+        maxWidth="500px"
         enable={{
           top: false,
           right: true,

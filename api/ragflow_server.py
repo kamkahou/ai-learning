@@ -33,6 +33,8 @@ import uuid
 
 from werkzeug.serving import run_simple
 from api import settings
+# Initialize settings before importing the Flask app to ensure SECRET_KEY is available
+settings.init_settings()
 from api.apps import app
 from api.db.runtime_config import RuntimeConfig
 from api.db.services.document_service import DocumentService
@@ -84,7 +86,6 @@ if __name__ == '__main__':
         f'project base: {utils.file_utils.get_project_base_directory()}'
     )
     show_configs()
-    settings.init_settings()
     print_rag_settings()
 
     if RAGFLOW_DEBUGPY_LISTEN > 0:

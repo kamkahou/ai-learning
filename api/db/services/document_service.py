@@ -337,6 +337,7 @@ class DocumentService(CommonService):
     @classmethod
     @DB.connection_context()
     def accessible(cls, doc_id, user_id):
+        # First check if user has direct access through UserTenant relationship
         docs = cls.model.select(
             cls.model.id).join(
             Knowledgebase, on=(
@@ -344,9 +345,36 @@ class DocumentService(CommonService):
         ).join(UserTenant, on=(UserTenant.tenant_id == Knowledgebase.tenant_id)
                ).where(cls.model.id == doc_id, UserTenant.user_id == user_id).paginate(0, 1)
         docs = docs.dicts()
-        if not docs:
+        if docs:
+            return True
+            
+        # If not directly accessible, check if user is non-admin and if the document belongs to an admin's KB
+        from api.db.services.user_service import UserService
+        from api.db.db_models import User
+        from api.db import StatusEnum
+        
+        success, user = UserService.get_by_id(user_id)
+        if not success or not user:
             return False
-        return True
+            
+        if not user.is_superuser:
+            # Get all admin users
+            admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+            admin_user_ids = [admin.id for admin in admin_users]
+            
+            # Check if this document belongs to any admin user's KB
+            doc_docs = cls.model.select(cls.model.id).join(
+                Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)
+            ).where(
+                cls.model.id == doc_id,
+                Knowledgebase.tenant_id.in_(admin_user_ids),
+                Knowledgebase.status == StatusEnum.VALID.value
+            ).paginate(0, 1)
+            doc_docs = doc_docs.dicts()
+            if doc_docs:
+                return True
+        
+        return False
 
     @classmethod
     @DB.connection_context()

@@ -350,13 +350,36 @@ class KnowledgebaseService(CommonService):
         #     user_id: User ID
         # Returns:
         #     Boolean indicating accessibility
+        
+        # First check if user has direct access through UserTenant relationship
         docs = cls.model.select(
             cls.model.id).join(UserTenant, on=(UserTenant.tenant_id == Knowledgebase.tenant_id)
                                ).where(cls.model.id == kb_id, UserTenant.user_id == user_id).paginate(0, 1)
         docs = docs.dicts()
-        if not docs:
+        if docs:
+            return True
+            
+        # If not directly accessible, check if user is non-admin and if the KB belongs to an admin
+        success, user = UserService.get_by_id(user_id)
+        if not success or not user:
             return False
-        return True
+            
+        if not user.is_superuser:
+            # Get all admin users
+            admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+            admin_user_ids = [admin.id for admin in admin_users]
+            
+            # Check if this KB belongs to any admin user
+            kb_docs = cls.model.select(cls.model.id).where(
+                cls.model.id == kb_id,
+                cls.model.tenant_id.in_(admin_user_ids),
+                cls.model.status == StatusEnum.VALID.value
+            ).paginate(0, 1)
+            kb_docs = kb_docs.dicts()
+            if kb_docs:
+                return True
+        
+        return False
 
     @classmethod
     @DB.connection_context()

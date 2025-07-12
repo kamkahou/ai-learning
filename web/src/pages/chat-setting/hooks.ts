@@ -240,9 +240,13 @@ export const useSelectDerivedConversationList = () => {
               },
             ],
           } as any,
-          ...conversationList,
+          ...(Array.isArray(conversationList) ? conversationList : []),
         ];
         return nextList;
+      } else {
+        // 如果沒有 dialogId，顯示錯誤提示
+        console.error('No dialogId available. Cannot create new conversation.');
+        alert('無法創建新聊天：系統正在載入中，請稍後再試，或刷新頁面重試。');
       }
 
       return pre;
@@ -252,7 +256,12 @@ export const useSelectDerivedConversationList = () => {
   // When you first enter the page, select the top conversation card
 
   useEffect(() => {
-    setList([...conversationList]);
+    // 確保 conversationList 是數組
+    if (Array.isArray(conversationList)) {
+      setList([...conversationList]);
+    } else {
+      setList([]);
+    }
   }, [conversationList]);
 
   return { list, addTemporaryConversation, loading };

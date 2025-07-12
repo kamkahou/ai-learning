@@ -45,6 +45,15 @@ def set_conversation():
     if not is_new:
         del req["conversation_id"]
         try:
+            # 先檢查用戶權限
+            e, conv = ConversationService.get_by_id(conv_id)
+            if not e:
+                return get_data_error_result(message="Conversation not found!")
+            
+            # 檢查用戶是否擁有這個 Conversation
+            if conv.user_id != current_user.id:
+                return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
+            
             if not ConversationService.update_by_id(conv_id, req):
                 return get_data_error_result(message="Conversation not found!")
             e, conv = ConversationService.get_by_id(conv_id)
@@ -59,7 +68,13 @@ def set_conversation():
         e, dia = DialogService.get_by_id(req["dialog_id"])
         if not e:
             return get_data_error_result(message="Dialog not found")
-        conv = {"id": conv_id, "dialog_id": req["dialog_id"], "name": req.get("name", "New conversation"), "message": [{"role": "assistant", "content": dia.prompt_config["prologue"]}]}
+        conv = {
+            "id": conv_id, 
+            "dialog_id": req["dialog_id"], 
+            "name": req.get("name", "New conversation"), 
+            "message": [{"role": "assistant", "content": dia.prompt_config["prologue"]}],
+            "user_id": current_user.id  # 設置當前用戶ID，確保聊天記錄隔離
+        }
         ConversationService.save(**conv)
         return get_json_result(data=conv)
     except Exception as e:
@@ -74,15 +89,16 @@ def get():
         e, conv = ConversationService.get_by_id(conv_id)
         if not e:
             return get_data_error_result(message="Conversation not found!")
-        tenants = UserTenantService.query(user_id=current_user.id)
-        avatar = None
-        for tenant in tenants:
-            dialog = DialogService.query(tenant_id=tenant.tenant_id, id=conv.dialog_id)
-            if dialog and len(dialog) > 0:
-                avatar = dialog[0].icon
-                break
-        else:
+        
+        # 檢查用戶是否擁有這個 Conversation
+        if conv.user_id != current_user.id:
             return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
+        
+        # 獲取 Dialog 的 avatar，支持管理員和普通用戶的 Dialog
+        avatar = None
+        e, dialog = DialogService.get_by_id(conv.dialog_id)
+        if e:
+            avatar = dialog.icon
 
         def get_value(d, k1, k2):
             return d.get(k1, d.get(k2))
@@ -140,12 +156,11 @@ def rm():
             exist, conv = ConversationService.get_by_id(cid)
             if not exist:
                 return get_data_error_result(message="Conversation not found!")
-            tenants = UserTenantService.query(user_id=current_user.id)
-            for tenant in tenants:
-                if DialogService.query(tenant_id=tenant.tenant_id, id=conv.dialog_id):
-                    break
-            else:
+            
+            # 檢查用戶是否擁有這個 Conversation
+            if conv.user_id != current_user.id:
                 return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
+            
             ConversationService.delete_by_id(cid)
         return get_json_result(data=True)
     except Exception as e:
@@ -157,9 +172,47 @@ def rm():
 def list_convsersation():
     dialog_id = request.args["dialog_id"]
     try:
-        if not DialogService.query(tenant_id=current_user.id, id=dialog_id):
+        # Check if current user can access this dialog
+        from api.db.services.user_service import UserService
+        from api.db.db_models import User
+        success, user = UserService.get_by_id(current_user.id)
+        if not success or not user:
+            return get_data_error_result(message="User not found")
+
+        # Check if user owns the dialog or if user is non-admin accessing admin dialog
+        dialog_accessible = False
+        
+        # First check if user owns the dialog
+        if DialogService.query(tenant_id=current_user.id, id=dialog_id):
+            dialog_accessible = True
+        
+        # If user doesn't own the dialog and is not admin, check if it's an admin dialog
+        if not dialog_accessible and not user.is_superuser:
+            # Check if this dialog belongs to an admin user
+            admin_users = User.select().where(User.is_superuser == True, User.status == "1")
+            admin_user_ids = [admin.id for admin in admin_users]
+            
+            if admin_user_ids:
+                admin_dialog = DialogService.model.select().where(
+                    DialogService.model.tenant_id.in_(admin_user_ids),
+                    DialogService.model.id == dialog_id,
+                    DialogService.model.status == "1"
+                ).first()
+                
+                if admin_dialog:
+                    dialog_accessible = True
+        
+        if not dialog_accessible:
             return get_json_result(data=False, message="Only owner of dialog authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
-        convs = ConversationService.query(dialog_id=dialog_id, order_by=ConversationService.model.create_time, reverse=True)
+        
+        # 重要：每個用戶只能看到自己的聊天記錄
+        # 無論是管理員還是普通用戶，都只返回當前用戶的 Conversation
+        convs = ConversationService.query(
+            dialog_id=dialog_id, 
+            user_id=current_user.id,  # 只返回當前用戶的聊天記錄
+            order_by=ConversationService.model.create_time, 
+            reverse=True
+        )
 
         convs = [d.to_dict() for d in convs]
         return get_json_result(data=convs)
@@ -184,6 +237,11 @@ def completion():
         e, conv = ConversationService.get_by_id(req["conversation_id"])
         if not e:
             return get_data_error_result(message="Conversation not found!")
+        
+        # 檢查用戶是否擁有這個 Conversation
+        if conv.user_id != current_user.id:
+            return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
+        
         conv.message = deepcopy(req["messages"])
         e, dia = DialogService.get_by_id(conv.dialog_id)
         if not e:
@@ -289,6 +347,10 @@ def delete_msg():
     e, conv = ConversationService.get_by_id(req["conversation_id"])
     if not e:
         return get_data_error_result(message="Conversation not found!")
+    
+    # 檢查用戶是否擁有這個 Conversation
+    if conv.user_id != current_user.id:
+        return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
 
     conv = conv.to_dict()
     for i, msg in enumerate(conv["message"]):
@@ -312,6 +374,10 @@ def thumbup():
     e, conv = ConversationService.get_by_id(req["conversation_id"])
     if not e:
         return get_data_error_result(message="Conversation not found!")
+    
+    # 檢查用戶是否擁有這個 Conversation
+    if conv.user_id != current_user.id:
+        return get_json_result(data=False, message="Only owner of conversation authorized for this operation.", code=settings.RetCode.OPERATING_ERROR)
     up_down = req.get("thumbup")
     feedback = req.get("feedback", "")
     conv = conv.to_dict()

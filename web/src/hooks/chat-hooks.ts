@@ -98,22 +98,38 @@ export const useFetchNextDialogList = (pureFetch = false) => {
     refetchOnWindowFocus: false,
     queryFn: async (...params) => {
       console.log('🚀 ~ queryFn: ~ params:', params);
-      const { data } = await chatService.listDialog();
+      try {
+        const { data } = await chatService.listDialog();
+        console.log('📋 Dialog list API response:', data);
 
-      if (data.code === 0) {
-        const list: IDialog[] = data.data;
-        if (!pureFetch) {
-          if (list.length > 0) {
-            if (list.every((x) => x.id !== dialogId)) {
-              handleClickDialog(data.data[0].id);
+        if (data.code === 0) {
+          const list: IDialog[] = data.data;
+          console.log('✅ Dialog list loaded successfully:', list);
+
+          if (!pureFetch) {
+            if (list.length > 0) {
+              if (list.every((x) => x.id !== dialogId)) {
+                handleClickDialog(data.data[0].id);
+              }
+            } else {
+              console.warn('⚠️ Dialog list is empty, redirecting to /chat');
+              history.push('/chat');
             }
-          } else {
-            history.push('/chat');
           }
+          return data?.data ?? [];
+        } else {
+          console.error(
+            '❌ Dialog list API failed with code:',
+            data.code,
+            'message:',
+            data.message,
+          );
+          return [];
         }
+      } catch (error) {
+        console.error('💥 Dialog list API error:', error);
+        return [];
       }
-
-      return data?.data ?? [];
     },
   });
 
@@ -260,8 +276,9 @@ export const useFetchNextConversationList = () => {
         } else {
           handleClickConversation('', '');
         }
+        return data?.data ?? [];
       }
-      return data?.data;
+      return [];
     },
   });
 

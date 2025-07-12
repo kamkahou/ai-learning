@@ -144,11 +144,35 @@ def get_kb_names(kb_ids):
 @login_required
 def list_dialogs():
     try:
-        diags = DialogService.query(
-            tenant_id=current_user.id,
-            status=StatusEnum.VALID.value,
-            reverse=True,
-            order_by=DialogService.model.create_time)
+        # Check if current user is admin or regular user
+        from api.db.services.user_service import UserService
+        from api.db.db_models import User
+        success, user = UserService.get_by_id(current_user.id)
+        if not success or not user:
+            return get_data_error_result(message="User not found")
+
+        if user.is_superuser:
+            # Admin users: return their own dialogs
+            diags = DialogService.query(
+                tenant_id=current_user.id,
+                status=StatusEnum.VALID.value,
+                reverse=True,
+                order_by=DialogService.model.create_time)
+        else:
+            # Non-admin users: return all admin users' dialogs
+            admin_users = User.select().where(User.is_superuser == True, User.status == StatusEnum.VALID.value)
+            
+            if not admin_users:
+                return get_json_result(data=[])
+
+            admin_user_ids = [admin.id for admin in admin_users]
+            
+            # Use raw Peewee query instead of CommonService.query for complex conditions
+            diags = list(DialogService.model.select().where(
+                DialogService.model.tenant_id.in_(admin_user_ids),
+                DialogService.model.status == StatusEnum.VALID.value
+            ).order_by(DialogService.model.create_time.desc()))
+
         diags = [d.to_dict() for d in diags]
         for d in diags:
             d["kb_ids"], d["kb_names"] = get_kb_names(d["kb_ids"])

@@ -18,7 +18,8 @@ const userRoutes = [
 ];
 
 export default () => {
-  const { userInfo, isLoading, isError, role } = useFetchUserInfo();
+  const { userInfo, isLoading, isError, role, isAuthenticated } =
+    useFetchUserInfo();
   const {
     loading: llmConfigLoading,
     configured,
@@ -30,21 +31,38 @@ export default () => {
 
   // Check admin LLM configuration on mount and when user becomes admin
   useEffect(() => {
-    if (role === 'admin' && userInfo && !showLlmReminder) {
-      checkAdminConfig().then((result) => {
-        if (!result.configured) {
-          setShowLlmReminder(true);
-        }
-      });
+    if (
+      isAuthenticated &&
+      role === 'admin' &&
+      userInfo &&
+      !showLlmReminder &&
+      !isLoading
+    ) {
+      checkAdminConfig()
+        .then((result) => {
+          if (!result.configured) {
+            setShowLlmReminder(true);
+          }
+        })
+        .catch((error) => {
+          console.error('Error checking admin config:', error);
+        });
     }
-  }, [role, userInfo, checkAdminConfig]);
+  }, [
+    isAuthenticated,
+    role,
+    userInfo,
+    checkAdminConfig,
+    showLlmReminder,
+    isLoading,
+  ]);
 
   // Reset reminder state when user logs out or role changes
   useEffect(() => {
-    if (role !== 'admin') {
+    if (!isAuthenticated || role !== 'admin') {
       setShowLlmReminder(false);
     }
-  }, [role]);
+  }, [isAuthenticated, role]);
 
   const handleCloseLlmReminder = () => {
     setShowLlmReminder(false);

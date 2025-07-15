@@ -115,9 +115,9 @@ class QuestionRecordService(CommonService):
                 
             # 排序
             if desc:
-                query = query.order_by(cls.model.getter_by(orderby).desc())
+                query = query.order_by(getattr(cls.model, orderby).desc())
             else:
-                query = query.order_by(cls.model.getter_by(orderby).asc())
+                query = query.order_by(getattr(cls.model, orderby).asc())
                 
             # 分頁
             query = query.paginate(page_number, items_per_page)

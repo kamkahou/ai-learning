@@ -5,6 +5,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import {
+  App,
   Button,
   Card,
   Col,
@@ -17,7 +18,6 @@ import {
   Statistic,
   Table,
   Tooltip,
-  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -47,6 +47,7 @@ interface QuestionStats {
 }
 
 const QuestionRecordManagement: React.FC = () => {
+  const { message } = App.useApp();
   const [data, setData] = useState<QuestionRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);

@@ -6,12 +6,22 @@ export const useFetchUserInfo = () => {
     queryKey: ['userInfo'],
     queryFn: async () => {
       const { data } = await userService.user_info();
-      return data.data;
+      if (data.code === 0) {
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Failed to fetch user info');
+      }
     },
     retry: false,
   });
 
   const role = data?.is_superuser ? 'admin' : 'user';
 
-  return { userInfo: data, isLoading, isError, role };
-}; 
+  return {
+    userInfo: data,
+    isLoading,
+    isError,
+    role: data ? role : undefined,
+    isAuthenticated: !!data && !isError,
+  };
+};

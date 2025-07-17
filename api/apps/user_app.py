@@ -46,7 +46,7 @@ from api.db.services.question_record_service import QuestionRecordService
 from api.utils.api_utils import get_json_result, construct_response
 
 
-manager = Blueprint("user_manager", __name__, url_prefix="/api/v1")
+manager = Blueprint("user_manager", __name__)
 
 
 @manager.route("/login", methods=["POST", "GET"])  # noqa: F821
@@ -944,7 +944,9 @@ def get_token_usage_statistics():
 @login_required
 def get_all_users_token_usage():
     """Get all users' token usage for admin."""
+    logging.info(f"Admin user {current_user.email} is requesting all users' token usage.")
     if not current_user.is_superuser:
+        logging.warning(f"Permission denied for user {current_user.email} to access all users' token usage.")
         return get_data_error_result(
             message="Only super admin is authorized for this operation."
         )
@@ -952,10 +954,13 @@ def get_all_users_token_usage():
     try:
         limit = int(request.args.get("limit", 100))
         offset = int(request.args.get("offset", 0))
+        logging.info(f"Fetching token usage with limit={limit}, offset={offset}")
 
         usage_data = UserTokenService.get_all_users_token_usage(limit, offset)
+        logging.info(f"Successfully fetched {len(usage_data)} records for token usage.")
         return get_json_result(data=usage_data)
     except Exception as e:
+        logging.error(f"Error getting all users token usage: {e}", exc_info=True)
         return server_error_response(e)
 
 

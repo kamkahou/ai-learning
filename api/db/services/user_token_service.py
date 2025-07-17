@@ -202,38 +202,58 @@ class UserTokenService(CommonService):
             List[Dict]: 用戶 token 使用統計列表
         """
         try:
-            # 獲取用戶 token 使用統計，並加入用戶信息
-            query = """
-                SELECT 
-                    utu.user_id,
-                    u.nickname,
-                    u.email,
-                    u.is_superuser,
-                    utu.llm_type,
-                    utu.llm_name,
-                    utu.used_tokens,
-                    utu.token_limit,
-                    utu.reset_date,
-                    utu.is_active,
-                    utu.create_date,
-                    utu.update_date
-                FROM user_token_usage utu
-                LEFT JOIN user u ON utu.user_id = u.id
-                ORDER BY utu.update_date DESC
-                LIMIT %s OFFSET %s
-            """
+            # 首先獲取所有用戶
+            all_users = User.select().where(User.status == "1").order_by(User.id)
             
-            cursor = DB.execute_sql(query, (limit, offset))
-            columns = [desc[0] for desc in cursor.description]
             results = []
-            
-            for row in cursor.fetchall():
-                results.append(dict(zip(columns, row)))
+            for user in all_users:
+                # 獲取該用戶的所有token使用記錄
+                user_token_records = cls.model.select().where(cls.model.user_id == user.id)
                 
-            return results
+                if user_token_records.exists():
+                    # 如果用戶有token使用記錄，添加所有記錄
+                    for record in user_token_records:
+                        results.append({
+                            'user_id': user.id,
+                            'nickname': user.nickname,
+                            'user_email': user.email,  # 修改為 user_email 以匹配前端
+                            'is_superuser': user.is_superuser,
+                            'llm_type': record.llm_type,
+                            'llm_name': record.llm_name,
+                            'used_tokens': record.used_tokens,
+                            'token_limit': record.token_limit,
+                            'reset_date': record.reset_date,
+                            'is_active': record.is_active,
+                            'create_date': record.create_date,
+                            'update_date': record.update_date,
+                        })
+                else:
+                    # 如果用戶沒有token使用記錄，創建一個預設記錄顯示
+                    default_limit = 0 if user.is_superuser else getattr(settings, 'NORMAL_USER_TOKEN_LIMIT', 0)
+                    results.append({
+                        'user_id': user.id,
+                        'nickname': user.nickname,
+                        'user_email': user.email,  # 修改為 user_email 以匹配前端
+                        'is_superuser': user.is_superuser,
+                        'llm_type': 'CHAT',
+                        'llm_name': 'Default',
+                        'used_tokens': 0,
+                        'token_limit': default_limit,
+                        'reset_date': cls._get_next_reset_date(),
+                        'is_active': True,
+                        'create_date': datetime.now(),
+                        'update_date': datetime.now(),
+                    })
+            
+            # 按更新時間排序並應用分頁
+            results.sort(key=lambda x: x['update_date'], reverse=True)
+            start_idx = offset
+            end_idx = offset + limit
+            
+            return results[start_idx:end_idx]
             
         except Exception as e:
-            logging.error(f"Failed to get all users token usage: {e}")
+            logging.error(f"Failed to get all users token usage: {e}", exc_info=True)
             return []
     
     @classmethod

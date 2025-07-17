@@ -1,4 +1,5 @@
 import { useFetchUserInfo } from '@/hooks/user-setting-hooks';
+import { getAuthorization } from '@/utils/authorization-util';
 import {
   BarChartOutlined,
   EditOutlined,
@@ -66,25 +67,55 @@ const TokenUsageSettings: React.FC = () => {
     setLoading(true);
     try {
       const endpoint = isAdmin
-        ? '/api/v1/admin/token_usage/users'
-        : '/api/v1/token_usage';
+        ? '/v1/user/admin/token_usage/users'
+        : '/v1/user/token_usage';
+      console.log('Fetching token usage from endpoint:', endpoint);
+
       const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: getAuthorization(),
         },
         credentials: 'include',
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      console.log(
+        'Response headers:',
+        Object.fromEntries(response.headers.entries()),
+      );
+
       if (response.ok) {
         const result = await response.json();
-        if (result.retcode === 0) {
+        console.log('Response data:', result);
+        console.log('Token usage data array:', result.data);
+        console.log(
+          'Number of users returned:',
+          result.data ? result.data.length : 0,
+        );
+
+        // 詳細查看每個用戶的數據結構
+        if (result.data && result.data.length > 0) {
+          result.data.forEach((user, index) => {
+            console.log(`User ${index + 1}:`, user);
+            console.log(`User ${index + 1} email:`, user.email);
+            console.log(`User ${index + 1} user_email:`, user.user_email);
+          });
+        }
+
+        if (result.code === 0) {
           setTokenUsageData(result.data || []);
         } else {
-          message.error(result.retmsg || '獲取 token 使用數據失敗');
+          console.error('API returned error:', result);
+          message.error(result.message || '獲取 token 使用數據失敗');
         }
       } else {
-        message.error('獲取 token 使用數據失敗');
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        message.error(`獲取 token 使用數據失敗 (HTTP ${response.status})`);
       }
     } catch (error) {
       console.error('Error fetching token usage:', error);
@@ -98,19 +129,38 @@ const TokenUsageSettings: React.FC = () => {
     if (!isAdmin) return;
 
     try {
-      const response = await fetch('/api/v1/admin/token_usage/statistics', {
+      console.log(
+        'Fetching statistics from: /v1/user/admin/token_usage/statistics',
+      );
+      const response = await fetch('/v1/user/admin/token_usage/statistics', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: getAuthorization(),
         },
         credentials: 'include',
       });
 
+      console.log('Statistics response status:', response.status);
+      console.log('Statistics response ok:', response.ok);
+
       if (response.ok) {
         const result = await response.json();
-        if (result.retcode === 0) {
+        console.log('Statistics response data:', result);
+        console.log('Statistics data object:', result.data);
+        if (result.code === 0) {
           setStatistics(result.data);
+        } else {
+          console.error('Statistics API returned error:', result);
         }
+      } else {
+        const errorText = await response.text();
+        console.error(
+          'Statistics HTTP Error:',
+          response.status,
+          response.statusText,
+        );
+        console.error('Statistics error response body:', errorText);
       }
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -143,10 +193,11 @@ const TokenUsageSettings: React.FC = () => {
   const confirmEditLimit = async () => {
     try {
       const values = await form.validateFields();
-      const response = await fetch('/api/v1/token_usage/set_limit', {
+      const response = await fetch('/v1/user/token_usage/set_limit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: getAuthorization(),
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -159,13 +210,13 @@ const TokenUsageSettings: React.FC = () => {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.retcode === 0) {
+        if (result.code === 0) {
           message.success('限制設置成功');
           setEditModalVisible(false);
           fetchTokenUsage();
           if (isAdmin) fetchStatistics();
         } else {
-          message.error(result.retmsg || '設置失敗');
+          message.error(result.message || '設置失敗');
         }
       } else {
         message.error('設置失敗');
@@ -178,10 +229,11 @@ const TokenUsageSettings: React.FC = () => {
 
   const confirmResetUsage = async () => {
     try {
-      const response = await fetch('/api/v1/token_usage/reset', {
+      const response = await fetch('/v1/user/token_usage/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: getAuthorization(),
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -193,13 +245,13 @@ const TokenUsageSettings: React.FC = () => {
 
       if (response.ok) {
         const result = await response.json();
-        if (result.retcode === 0) {
+        if (result.code === 0) {
           message.success('重置成功');
           setResetModalVisible(false);
           fetchTokenUsage();
           if (isAdmin) fetchStatistics();
         } else {
-          message.error(result.retmsg || '重置失敗');
+          message.error(result.message || '重置失敗');
         }
       } else {
         message.error('重置失敗');
@@ -224,6 +276,9 @@ const TokenUsageSettings: React.FC = () => {
   };
 
   const formatNumber = (num: number) => {
+    if (num == null || num === undefined) {
+      return '0';
+    }
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
     }

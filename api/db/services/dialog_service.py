@@ -178,7 +178,12 @@ def chat(dialog, messages, stream=True, **kwargs):
 
     rerank_mdl = None
     if dialog.rerank_id:
-        rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
+        try:
+            rerank_mdl = LLMBundle(dialog.tenant_id, LLMType.RERANK, dialog.rerank_id)
+        except Exception as e:
+            logging.warning(f"Failed to create rerank model {dialog.rerank_id}: {e}")
+            # 如果创建失败，继续而不使用rerank模型
+            rerank_mdl = None
 
     bind_reranker_ts = timer()
     generate_keyword_ts = bind_reranker_ts

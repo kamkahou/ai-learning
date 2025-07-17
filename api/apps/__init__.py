@@ -134,9 +134,14 @@ pages_dir = [
     Path(__file__).parent.parent / "api" / "apps" / "sdk",
 ]
 
-client_urls_prefix = [
-    register_page(path) for dir in pages_dir for path in search_pages_path(dir)
-]
+# Find all paths and store them in a set to ensure uniqueness
+all_paths = set()
+for d in pages_dir:
+    for path in search_pages_path(d):
+        all_paths.add(path)
+
+# Register each unique page, sorting for deterministic order
+client_urls_prefix = [register_page(path) for path in sorted(list(all_paths))]
 
 
 @login_manager.request_loader

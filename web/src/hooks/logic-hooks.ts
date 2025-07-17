@@ -211,7 +211,16 @@ export const useSendMessageWithSse = (
               break;
             }
             try {
-              const val = JSON.parse(value?.data || '');
+              const rawData = value?.data || '';
+              console.log('Raw SSE data:', rawData); // 添加调试信息
+
+              // 检查数据格式，可能需要清理前缀
+              let cleanData = rawData;
+              if (rawData.startsWith('data:')) {
+                cleanData = rawData.substring(5); // 移除 'data:' 前缀
+              }
+
+              const val = JSON.parse(cleanData);
               const d = val?.data;
               if (typeof d !== 'boolean') {
                 console.info('data:', d);
@@ -221,7 +230,29 @@ export const useSendMessageWithSse = (
                 });
               }
             } catch (e) {
-              console.warn(e);
+              console.error('JSON解析错误:', e);
+              console.error('原始数据:', value?.data);
+              console.error('数据类型:', typeof value?.data);
+
+              // 尝试其他解析方式
+              try {
+                const rawData = value?.data || '';
+                if (rawData.includes('{')) {
+                  const jsonStart = rawData.indexOf('{');
+                  const jsonData = rawData.substring(jsonStart);
+                  const val = JSON.parse(jsonData);
+                  const d = val?.data;
+                  if (typeof d !== 'boolean') {
+                    console.info('备用解析成功, data:', d);
+                    setAnswer({
+                      ...d,
+                      conversationId: body?.conversation_id,
+                    });
+                  }
+                }
+              } catch (fallbackError) {
+                console.error('备用解析也失败:', fallbackError);
+              }
             }
           }
         }
@@ -263,7 +294,26 @@ export const useSpeechWithSse = (url: string = api.tts) => {
           message.error(res?.message);
         }
       } catch (error) {
-        console.warn('🚀 ~ error:', error);
+        console.error('🚀 ~ Speech API JSON解析错误:', error);
+
+        // 尝试获取原始响应文本进行调试
+        try {
+          const rawText = await response.clone().text();
+          console.error('🚀 ~ Speech API原始响应:', rawText);
+
+          // 尝试清理和重新解析
+          if (rawText.includes('{')) {
+            const jsonStart = rawText.indexOf('{');
+            const jsonData = rawText.substring(jsonStart);
+            const parsedData = JSON.parse(jsonData);
+            if (parsedData?.code !== 0) {
+              message.error(parsedData?.message || '语音合成服务出错');
+            }
+          }
+        } catch (fallbackError) {
+          console.error('🚀 ~ Speech API备用解析也失败:', fallbackError);
+          message.error('语音合成服务响应格式错误');
+        }
       }
       return response;
     },

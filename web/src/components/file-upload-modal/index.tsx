@@ -109,9 +109,7 @@ const FileUploadModal = ({
     'private',
   );
 
-  console.log('Debug - User Info:', userInfo);
-  console.log('Debug - Is Admin:', isAdmin);
-  console.log('Debug - File Visibility:', fileVisibility);
+  // 移除了重复的调试信息，避免控制台输出过多日志
 
   const clearFileList = () => {
     if (setFileList) {

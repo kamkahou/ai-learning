@@ -42,6 +42,7 @@ from api.db import UserTenantRole, FileType
 from api import settings
 from api.db.services.user_service import UserService, TenantService, UserTenantService
 from api.db.services.file_service import FileService
+from api.db.services.question_record_service import QuestionRecordService
 from api.utils.api_utils import get_json_result, construct_response
 
 
@@ -942,75 +943,79 @@ def get_token_usage_statistics():
 @manager.route("/admin/token_usage/users", methods=["GET"])  # noqa: F821
 @login_required
 def get_all_users_token_usage():
-    """
-    Get all users' token usage (Admin only).
-    ---
-    tags:
-      - Admin Token Management
-    security:
-      - ApiKeyAuth: []
-    parameters:
-      - in: query
-        name: limit
-        type: integer
-        default: 100
-        description: Maximum number of records to return
-      - in: query
-        name: offset
-        type: integer
-        default: 0
-        description: Number of records to skip
-    responses:
-      200:
-        description: All users' token usage retrieved successfully.
-        schema:
-          type: object
-          properties:
-            data:
-              type: array
-              items:
-                type: object
-                properties:
-                  user_id:
-                    type: string
-                    description: User ID
-                  nickname:
-                    type: string
-                    description: User nickname
-                  email:
-                    type: string
-                    description: User email
-                  is_superuser:
-                    type: boolean
-                    description: Whether user is admin
-                  llm_type:
-                    type: string
-                    description: LLM type
-                  llm_name:
-                    type: string
-                    description: LLM model name
-                  used_tokens:
-                    type: integer
-                    description: Used tokens count
-                  token_limit:
-                    type: integer
-                    description: Token limit
-                  reset_date:
-                    type: string
-                    description: Next reset date
-    """
+    """Get all users' token usage for admin."""
+    if not current_user.is_superuser:
+        return get_data_error_result(
+            message="Only super admin is authorized for this operation."
+        )
+
     try:
-        if not current_user.is_superuser:
-            return get_json_result(
-                data=False,
-                message="Only administrators can access all users' token usage",
-                code=settings.RetCode.PERMISSION_ERROR
-            )
-        
         limit = int(request.args.get("limit", 100))
         offset = int(request.args.get("offset", 0))
-        
+
         usage_data = UserTokenService.get_all_users_token_usage(limit, offset)
         return get_json_result(data=usage_data)
+    except Exception as e:
+        return server_error_response(e)
+
+
+# ======================== Question Record Management ========================
+
+@manager.route('/question_record/list', methods=['GET'])
+@login_required
+def get_question_list():
+    """Gets the list of question records."""
+    if not (hasattr(current_user, 'is_superuser') and current_user.is_superuser):
+        return get_data_error_result(message="Permission denied. Admin access required.")
+
+    try:
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 20))
+        questions, total = QuestionRecordService.get_paged_list(page, page_size, **request.args.to_dict())
+        return get_json_result(data={'list': questions, 'total': total, 'page': page, 'page_size': page_size})
+
+    except Exception as e:
+        return server_error_response(e)
+
+@manager.route('/question_record/stats', methods=['GET'])
+@login_required
+def get_question_stats():
+    """Gets question statistics."""
+    if not (hasattr(current_user, 'is_superuser') and current_user.is_superuser):
+        return get_data_error_result(message="Permission denied. Admin access required.")
+
+    try:
+        stats = QuestionRecordService.get_stats(**request.args.to_dict())
+        return get_json_result(data=stats)
+
+    except Exception as e:
+        return server_error_response(e)
+
+@manager.route('/question_record/export', methods=['GET'])
+@login_required
+def export_questions():
+    """Exports question records."""
+    if not (hasattr(current_user, 'is_superuser') and current_user.is_superuser):
+        return get_data_error_result(message="Permission denied. Admin access required.")
+
+    try:
+        questions = QuestionRecordService.get_all(**request.args.to_dict())
+        return get_json_result(data=questions)
+
+    except Exception as e:
+        return server_error_response(e)
+
+@manager.route('/question_record/delete', methods=['POST'])
+@login_required
+@validate_request("question_ids")
+def delete_questions():
+    """Deletes question records."""
+    if not (hasattr(current_user, 'is_superuser') and current_user.is_superuser):
+        return get_data_error_result(message="Permission denied. Admin access required.")
+
+    try:
+        deleted_count = QuestionRecordService.batch_delete(request.json['question_ids'])
+        return get_json_result(data={'deleted_count': deleted_count})
+
     except Exception as e:
         return server_error_response(e)
